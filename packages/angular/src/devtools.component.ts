@@ -2,21 +2,16 @@ import {
   Component,
   OnInit,
   OnDestroy,
-  signal,
-  inject,
-  ElementRef,
-  ViewChild,
-  AfterViewInit
+  signal
 }                        from '@angular/core'
-import { CommonModule }  from '@angular/common'
 import { devTools }      from '@ngstato/core'
 import type { ActionLog } from '@ngstato/core'
-import { STATO_CONFIG }  from './provide-ngstato'
+import { JsonPipe } from '@angular/common'
 
 @Component({
   selector:   'ngstato-devtools',
   standalone: true,
-  imports:    [CommonModule],
+  imports:    [JsonPipe],
   template: `
     <!-- Bouton flottant -->
     @if (!isOpen()) {
@@ -319,7 +314,6 @@ import { STATO_CONFIG }  from './provide-ngstato'
 })
 export class StatoDevToolsComponent implements OnInit, OnDestroy {
 
-  private config  = inject(STATO_CONFIG, { optional: true })
   private unsub?: () => void
 
   // State UI

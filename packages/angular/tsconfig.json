@@ -5,8 +5,17 @@
     "rootDir":                 "./src",
     "experimentalDecorators":  true,
     "emitDecoratorMetadata":   true,
-    "useDefineForClassFields": false
+    "useDefineForClassFields": false,
+    "declaration":             true,
+    "declarationMap":          true,
+    "inlineSources":           true,
+    "strictTemplates":         true
+  },
+  "angularCompilerOptions": {
+    "strictInjectionParameters":  true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates":            true
   },
   "include":  ["src/**/*"],
-  "exclude":  ["dist", "node_modules"]
+  "exclude":  ["dist", "node_modules", "**/*.spec.ts", "**/*.test.ts"]
 }

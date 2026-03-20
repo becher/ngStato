@@ -1,35 +1,38 @@
 {
   "name": "@ngstato/angular",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "private": false,
-  "description": "Stato — Angular adapter with native Signals",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "description": "ngStato — Angular adapter with native Signals",
+  "main":   "./dist/fesm2022/ngstato-angular.mjs",
+  "module": "./dist/fesm2022/ngstato-angular.mjs",
+  "types":  "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types":   "./dist/index.d.ts",
+      "import":  "./dist/fesm2022/ngstato-angular.mjs",
+      "default": "./dist/fesm2022/ngstato-angular.mjs"
+    },
+    "./package.json": {
+      "default": "./package.json"
     }
   },
   "scripts": {
-    "build": "tsup",
-    "test": "vitest run",
-    "dev": "tsup --watch"
+    "build": "ng-packagr -p ng-package.json",
+    "test":  "vitest run",
+    "dev":   "ng-packagr -p ng-package.json --watch"
   },
   "peerDependencies": {
+    "@angular/core":   ">=17.0.0",
     "@angular/common": ">=17.0.0",
-    "@angular/core": ">=17.0.0"
-  },
-  "dependencies": {
-    "@ngstato/core": "workspace:*"
+    "@ngstato/core":   "^0.1.2"
   },
   "devDependencies": {
-    "@angular/common": "^18.2.14",
-    "@angular/core": "^17.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.4.0",
-    "vitest": "^1.6.0"
+    "ng-packagr":            "^18.0.0",
+    "@angular/compiler-cli": "^18.0.0",
+    "@angular/compiler":     "^18.0.0",
+    "@angular/common":       "^18.0.0",
+    "typescript":            "~5.5.0",
+    "tsup":                  "^8.0.0",
+    "vitest":                "^1.6.0"
   }
 }

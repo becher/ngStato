@@ -1,6 +1,6 @@
 packages:
   - "packages/*"
-  - "apps/*"
+  - "apps/student-demo"
   - "plugins/*"
 allowBuilds:
   esbuild: false

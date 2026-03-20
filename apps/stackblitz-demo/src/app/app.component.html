@@ -1,0 +1,54 @@
+<div class="app">
+
+  <header>
+    <h1>📝 ngStato — Todo Demo</h1>
+    <p>State management Angular sans RxJS</p>
+  </header>
+
+  <!-- Stats -->
+  <div class="stats">
+    <span class="badge blue">Total : {{ store.total }}</span>
+    <span class="badge green">Faites : {{ store.completed }}</span>
+    <span class="badge orange">Restantes : {{ store.remaining }}</span>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="form">
+    <input
+      [(ngModel)]="newTodo"
+      placeholder="Nouvelle tâche..."
+      (keyup.enter)="onAdd()"
+    />
+    <button (click)="onAdd()" [disabled]="!newTodo.trim()">
+      Ajouter
+    </button>
+  </div>
+
+  <!-- Loading -->
+  @if (store.loading) {
+    <div class="loading">Chargement...</div>
+  }
+
+  <!-- Liste -->
+  <ul>
+    @for (todo of store.todos; track todo.id) {
+      <li [class.done]="todo.done">
+        <input
+          type="checkbox"
+          [checked]="todo.done"
+          (change)="store.toggleTodo(todo.id)"
+        />
+        <span>{{ todo.text }}</span>
+        <button (click)="store.deleteTodo(todo.id)">✕</button>
+      </li>
+    } @empty {
+      <li class="empty">Aucune tâche — ajoutez-en une !</li>
+    }
+  </ul>
+
+  <p class="hint">
+    🛠 Ouvrez les DevTools ngStato en bas à gauche
+  </p>
+
+</div>
+ <ngstato-devtools />

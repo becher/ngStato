@@ -338,6 +338,12 @@ computed: {
 
 ---
 
+## Demo live
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/becher/ngstato/tree/main/apps/stackblitz-demo)
+
+---
+
 ## Roadmap
 
 ### v0.1 ✅ TERMINÉ
