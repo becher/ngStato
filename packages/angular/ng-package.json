@@ -4,5 +4,8 @@
     "entryFile": "src/index.ts"
   },
   "dest": "dist",
-  "deleteDestPath": true
+  "deleteDestPath": true,
+  "allowedNonPeerDependencies": [
+    "@ngstato/core"
+  ]
 }
