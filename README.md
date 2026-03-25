@@ -340,7 +340,9 @@ computed: {
 
 ## Demo live
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/becher/ngstato/tree/main/apps/stackblitz-demo)
+<a href="https://stackblitz.com/github/becher/ngstato-demo" target="_blank" rel="noopener">
+  <img src="https://developer.stackblitz.com/img/open_in_stackblitz.svg" alt="Open in StackBlitz">
+</a>
 
 ---
 
