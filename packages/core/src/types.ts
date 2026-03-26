@@ -2,8 +2,8 @@
 // TYPES PUBLICS DE @ngstato/core
 // ─────────────────────────────────────────────────────
 
-// Le state de base — tout sauf actions, computed, hooks
-export type StateSlice<T> = Omit<T, 'actions' | 'computed' | 'hooks'>
+// Le state de base — tout sauf actions/computed/selectors/hooks
+export type StateSlice<T> = Omit<T, 'actions' | 'computed' | 'selectors' | 'hooks'>
 
 // Une action — sync ou async
 export type Action<S> = (state: S, ...args: any[]) => void | Promise<void> | (() => void)
@@ -13,6 +13,14 @@ export type ActionsMap<S> = Record<string, Action<S>>
 
 // Computed — dérivé du state local
 export type ComputedFn<S> = (state: S) => unknown
+export type SelectorFn<S> = (state: S) => unknown
+export type EffectDepsFn<S> = (state: S) => unknown | unknown[]
+export type EffectCleanup = void | (() => void)
+export type EffectRunner<S> = (
+  depsValue: unknown | unknown[],
+  ctx: { state: Readonly<S>; store: any; prevDepsValue?: unknown | unknown[] }
+) => EffectCleanup | Promise<EffectCleanup>
+export type EffectEntry<S> = [EffectDepsFn<S>, EffectRunner<S>]
 
 // Hooks lifecycle
 export interface StatoHooks<S> {
@@ -33,6 +41,8 @@ export interface StatoHooks<S> {
 export interface StatoStoreConfig<S extends object> {
   actions?:  ActionsMap<StateSlice<S>>
   computed?: Record<string, ComputedFn<StateSlice<S>> | unknown[]>
+  selectors?: Record<string, SelectorFn<StateSlice<S>> | unknown[]>
+  effects?: EffectEntry<StateSlice<S>>[]
   hooks?:    StatoHooks<any>
   [key: string]: unknown
 }

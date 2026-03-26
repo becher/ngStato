@@ -92,8 +92,8 @@ export function createAngularStore<S extends object>(
 }
 
 // ─────────────────────────────────────────────────────
-// CLASSE DE BASE — étendue par StatoStore()
-// Publique — pas de membres privés
+// OLD: StatoStoreBase (remplacée par StatoStore avec Proxy)
+// Gardée pour backward compatibility si besoin
 // ─────────────────────────────────────────────────────
 @Injectable()
 export class StatoStoreBase implements OnDestroy {
@@ -132,16 +132,11 @@ export class StatoStoreBase implements OnDestroy {
 }
 
 // ─────────────────────────────────────────────────────
-// FACTORY — StatoStore()
-// Crée un service Angular injectable
-// Usage :
-//   export class UserStore extends StatoStore({
-//     user: null,
-//     actions: { ... }
-//   }) {}
+// OLD: Config-based StatoStore (deprecated)
+// Gardée pour backward compatibility
 // ─────────────────────────────────────────────────────
 
-export function StatoStore<S extends object>(
+export function StatoStoreOld<S extends object>(
   config: S & StatoStoreConfig<S>
 ) {
   @Injectable({ providedIn: 'root' })
@@ -153,4 +148,96 @@ export function StatoStore<S extends object>(
   }
 
   return ConcreteStore
+}
+
+// ─────────────────────────────────────────────────────
+// HELPER TYPE — Extrait automatiquement les types du store
+// Pour auto-inférer state + actions + computed sans boilerplate
+// ─────────────────────────────────────────────────────
+
+type ExtractStoreType<T> = Omit<T, '__store__' | '__destroy__'>
+
+// ─────────────────────────────────────────────────────
+// FACTORY — StatoStore()
+// Crée un service Angular injectable avec auto-proxy
+//
+// Type-safe grâce aux génériques avancés — ZÉRO boilerplate!
+//
+// Usage :
+//   export class UserStore extends StatoStore(() => {
+//     const service = inject(UserService)
+//     return createUserStore(service)
+//   })
+//   // ✅ store.user, store.loadUser(), etc — tous typés auto!
+//   // ✅ Aucun "declare readonly" requis
+// ─────────────────────────────────────────────────────
+
+export function StatoStore<S extends object>(
+  factory: () => S
+): new() => ExtractStoreType<S> & OnDestroy {
+  @Injectable({ providedIn: 'root' })
+  class ConcreteStore implements OnDestroy {
+    private _store: any
+    [key: string]: any
+
+    constructor() {
+      // factory() est appelée dans le contexte d'injection Angular.
+      // Si factory() retourne déjà un store ngstato (createStore),
+      // on l'utilise tel quel. Sinon on le convertit via createAngularStore().
+      const produced = factory() as any
+      this._store = produced?.__store__ ? produced : createAngularStore(produced)
+
+      // Proxy dynamique: plus besoin de déclaration manuelle des getters/actions.
+      return new Proxy(this, {
+        get: (target, prop, receiver) => {
+          if (prop in target) {
+            return Reflect.get(target, prop, receiver)
+          }
+          return this._store?.[prop as keyof typeof this._store]
+        },
+        set: (target, prop, value, receiver) => {
+          if (prop in target) {
+            return Reflect.set(target, prop, value, receiver)
+          }
+          if (this._store && prop in this._store) {
+            this._store[prop] = value
+            return true
+          }
+          ;(target as any)[prop] = value
+          return true
+        },
+        has: (target, prop) => prop in target || prop in (this._store ?? {}),
+        ownKeys: (target) => {
+          const targetKeys = Reflect.ownKeys(target)
+          const storeKeys = this._store ? Reflect.ownKeys(this._store) : []
+          return Array.from(new Set([...targetKeys, ...storeKeys]))
+        },
+        getOwnPropertyDescriptor: (target, prop) => {
+          const targetDesc = Reflect.getOwnPropertyDescriptor(target, prop)
+          if (targetDesc) return targetDesc
+          if (this._store && prop in this._store) {
+            return {
+              configurable: true,
+              enumerable: true,
+              writable: true,
+              value: this._store[prop]
+            }
+          }
+          return undefined
+        }
+      })
+    }
+
+    ngOnDestroy() {
+      if (this._store?.__destroy__) {
+        this._store.__destroy__()
+        return
+      }
+      if (this._store?.__store__?.destroy) {
+        this._store.__store__.destroy(this._store)
+      }
+    }
+  }
+
+  return ConcreteStore as any
 }

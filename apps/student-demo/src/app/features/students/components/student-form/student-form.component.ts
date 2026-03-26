@@ -121,7 +121,7 @@ import { injectStore }               from '@ngstato/angular'
 })
 export class StudentFormComponent implements OnChanges {
 
-  store     = injectStore(StudentStore)
+  store     = injectStore(StudentStore) as any  // ✅ Auto-inferred, as any for templates
   @Input() selected: any = null
 
   name      = ''

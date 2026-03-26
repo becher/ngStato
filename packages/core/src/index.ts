@@ -16,14 +16,19 @@ export { throttled }                            from './helpers/throttled'
 export { retryable }                            from './helpers/retryable'
 export { fromStream }                           from './helpers/from-stream'
 export { optimistic }                           from './helpers/optimistic'
+export { withPersist }                          from './helpers/with-persist'
 
 // Types
 export type {
   StatoStoreConfig,
   StatoStoreInstance,
   StatoConfig,
-  StatoHooks
+  StatoHooks,
+  EffectEntry,
+  EffectDepsFn,
+  EffectRunner
 }                                               from './types'
+export type { PersistOptions, PersistStorage } from './helpers/with-persist'
 export { StatoHttpError }                       from './types'
 
 export { devTools, createDevTools, connectDevTools } from './devtools'

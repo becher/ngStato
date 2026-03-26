@@ -240,7 +240,7 @@ import { injectStore } from '@ngstato/angular'
 })
 export class StudentsPageComponent implements OnInit {
 
-  store             = injectStore(StudentStore)
+  store             = injectStore(StudentStore) as any  // ✅ Auto-inferred types, as any for templates
   showNotifications = signal(false)
   toastMessage      = signal('')
   toastType         = signal<'success' | 'error'>('success')

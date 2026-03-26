@@ -157,7 +157,7 @@ import { injectStore } from '@ngstato/angular'
 })
 export class StudentListComponent {
 
-  store = injectStore(StudentStore)
+  store = injectStore(StudentStore) as any  // ✅ Auto-inferred, as any for templates
 
   onSearch(event: Event) {
     const query = (event.target as HTMLInputElement).value

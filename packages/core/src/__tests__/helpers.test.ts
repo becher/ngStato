@@ -9,6 +9,8 @@ import { throttled }  from '../helpers/throttled'
 import { retryable }  from '../helpers/retryable'
 import { fromStream } from '../helpers/from-stream'
 import { optimistic } from '../helpers/optimistic'
+import { withPersist } from '../helpers/with-persist'
+import { createStore } from '../store'
 
 // ─────────────────────────────────────────────────────
 // TESTS — abortable()
@@ -572,5 +574,107 @@ describe('optimistic()', () => {
       expect.any(Object),
       'post-42'
     )
+  })
+})
+
+describe('withPersist()', () => {
+  function createMemoryStorage() {
+    const map = new Map<string, string>()
+    return {
+      getItem: (key: string) => map.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        map.set(key, value)
+      },
+      removeItem: (key: string) => {
+        map.delete(key)
+      }
+    }
+  }
+
+  it('hydrate le state au démarrage depuis le storage', () => {
+    const storage = createMemoryStorage()
+    storage.setItem(
+      'students',
+      JSON.stringify({
+        v: 1,
+        data: { count: 42, theme: 'dark' }
+      })
+    )
+
+    const store = createStore(
+      withPersist(
+        {
+          count: 0,
+          theme: 'light'
+        },
+        { key: 'students', storage }
+      )
+    )
+    store.__store__.init(store)
+
+    expect(store.count).toBe(42)
+    expect(store.theme).toBe('dark')
+  })
+
+  it('persiste uniquement les clés pickées', async () => {
+    const storage = createMemoryStorage()
+    const store = createStore(
+      withPersist(
+        {
+          count: 0,
+          loading: false,
+          actions: {
+            inc(state: any) {
+              state.count++
+            },
+            toggle(state: any) {
+              state.loading = !state.loading
+            }
+          }
+        },
+        {
+          key: 'counter',
+          storage,
+          pick: ['count']
+        }
+      )
+    )
+
+    await store.inc()
+    await store.toggle()
+
+    const raw = storage.getItem('counter')
+    expect(raw).toBeTruthy()
+    const parsed = JSON.parse(raw as string)
+    expect(parsed.data.count).toBe(1)
+    expect(parsed.data.loading).toBeUndefined()
+  })
+
+  it('utilise migrate si version différente', () => {
+    const storage = createMemoryStorage()
+    storage.setItem(
+      'vstore',
+      JSON.stringify({
+        v: 1,
+        data: { legacyCount: 7 }
+      })
+    )
+
+    const store = createStore(
+      withPersist(
+        {
+          count: 0
+        },
+        {
+          key: 'vstore',
+          version: 2,
+          storage,
+          migrate: (data: any) => ({ count: data.legacyCount ?? 0 })
+        }
+      )
+    )
+    store.__store__.init(store)
+
+    expect(store.count).toBe(7)
   })
 })

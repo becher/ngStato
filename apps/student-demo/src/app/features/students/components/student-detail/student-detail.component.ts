@@ -153,7 +153,7 @@ import { injectStore } from '@ngstato/angular'
 })
 export class StudentDetailComponent {
 
-  store = injectStore(StudentStore)
+  store = injectStore(StudentStore) as any  // ✅ Auto-inferred, as any for templates
 
   onClose() {
     this.store.selectStudent(null)

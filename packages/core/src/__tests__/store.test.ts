@@ -481,6 +481,115 @@ describe('createStore — computed avancé', () => {
   })
 })
 
+describe('createStore — selectors memoïzés', () => {
+  it('recalcule seulement quand les dépendances lues changent', async () => {
+    const calls = vi.fn((state: any) =>
+      state.students.filter((s: any) => s.grade >= 10)
+    )
+
+    const store = createStore({
+      students: [{ id: '1', grade: 12 }, { id: '2', grade: 8 }],
+      uiLoading: false,
+      selectors: {
+        passing: calls
+      },
+      actions: {
+        toggleLoading(state: any) {
+          state.uiLoading = !state.uiLoading
+        },
+        addStudent(state: any, student: any) {
+          state.students = [...state.students, student]
+        }
+      }
+    })
+
+    expect(store.passing).toHaveLength(1)
+    expect(calls).toHaveBeenCalledTimes(1)
+
+    // `students` inchangé -> selector ne recalcule pas
+    await store.toggleLoading()
+    expect(store.passing).toHaveLength(1)
+    expect(calls).toHaveBeenCalledTimes(1)
+
+    // `students` change -> selector recalcule
+    await store.addStudent({ id: '3', grade: 16 })
+    expect(store.passing).toHaveLength(2)
+    expect(calls).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('createStore — effects réactifs', () => {
+  it('déclenche un effect au changement de dépendance', async () => {
+    const effectSpy = vi.fn()
+    const store = createStore({
+      count: 0,
+      effects: [
+        [(state: any) => state.count, (count) => effectSpy(count)]
+      ],
+      actions: {
+        inc(state: any) {
+          state.count++
+        }
+      }
+    })
+
+    // Exécution initiale
+    await new Promise((r) => setTimeout(r, 0))
+    expect(effectSpy).toHaveBeenCalledWith(0)
+
+    await store.inc()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(effectSpy).toHaveBeenCalledWith(1)
+  })
+
+  it('n exécute pas un effect si ses deps ne changent pas', async () => {
+    const effectSpy = vi.fn()
+    const store = createStore({
+      count: 0,
+      loading: false,
+      effects: [
+        [(state: any) => state.count, () => effectSpy()]
+      ],
+      actions: {
+        toggleLoading(state: any) {
+          state.loading = !state.loading
+        }
+      }
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+    expect(effectSpy).toHaveBeenCalledTimes(1)
+
+    await store.toggleLoading()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(effectSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('appelle le cleanup précédent avant rerun', async () => {
+    const cleanupSpy = vi.fn()
+    const store = createStore({
+      count: 0,
+      effects: [
+        [
+          (state: any) => state.count,
+          () => () => cleanupSpy()
+        ]
+      ],
+      actions: {
+        inc(state: any) {
+          state.count++
+        }
+      }
+    })
+
+    await new Promise((r) => setTimeout(r, 0))
+    await store.inc()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(cleanupSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('createStore — stateProxy avancé', () => {
 
   it('modification d un array dans une action', async () => {

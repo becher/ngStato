@@ -23,14 +23,21 @@ const store = createStore({
     }
   },
 
-  computed: {
+  selectors: {
     total: (state) => state.users.length
-  }
+  },
+
+  effects: [
+    [
+      (state) => state.users.length,
+      (count) => console.log('Total users:', count)
+    ]
+  ]
 })
 
 await store.loadUsers()
 console.log(store.users)   // User[]
-console.log(store.total)   // number
+console.log(store.total)   // number (selector memoïzé)
 ```
 
 ## Helpers
@@ -43,6 +50,13 @@ console.log(store.total)   // number
 | `retryable()` | Retry avec backoff fixe ou exponentiel |
 | `fromStream()` | Realtime — WebSocket, Firebase, Supabase |
 | `optimistic()` | Optimistic update + rollback automatique |
+| `withPersist()` | Persistance localStorage/sessionStorage + migration |
+
+## Nouvautés v0.2
+
+- `selectors` memoïzés (recalcul seulement quand les dépendances changent)
+- `effects` réactifs explicites avec cleanup automatique
+- `withPersist()` pour hydrater/persister le state
 
 ## Documentation
 

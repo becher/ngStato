@@ -2,7 +2,7 @@
 
 > Stato est une librairie de gestion d'état Angular moderne pour remplacer NgRx complètement, avec une API plus simple, Signals-first, sans RxJS obligatoire.
 
-![version](https://img.shields.io/badge/version-0.1.0-blue)
+![version](https://img.shields.io/badge/version-0.2.0-blue)
 ![tests](https://img.shields.io/badge/tests-144%20%E2%9C%85-green)
 ![bundle](https://img.shields.io/badge/bundle-~3KB-yellow)
 ![angular](https://img.shields.io/badge/Angular-17%2B-red)
@@ -77,9 +77,8 @@ export const appConfig: ApplicationConfig = {
 
 ```ts
 // user.store.ts
-import { Injectable, OnDestroy, inject } from '@angular/core'
 import { createStore, http, optimistic, retryable, connectDevTools } from '@ngstato/core'
-import { injectStore } from '@ngstato/angular'
+import { StatoStore, injectStore } from '@ngstato/angular'
 
 function createUserStore() {
   const store = createStore({
@@ -135,20 +134,10 @@ function createUserStore() {
   return store
 }
 
-@Injectable({ providedIn: 'root' })
-export class UserStore implements OnDestroy {
-  private _store = createUserStore()
-
-  get users()     { return this._store.users     }
-  get isLoading() { return this._store.isLoading }
-  get total()     { return this._store.total     }
-
-  loadUsers  = (...a: any[]) => this._store.loadUsers(...a)
-  deleteUser = (...a: any[]) => this._store.deleteUser(...a)
-  addUser    = (...a: any[]) => this._store.addUser(...a)
-
-  ngOnDestroy() { this._store.__store__.destroy(this._store) }
-}
+// Injection auto + API classe sans boilerplate
+export const UserStore = StatoStore(() => {
+  return createUserStore()
+})
 
 // Dans un composant
 @Component({ ... })
@@ -169,6 +158,7 @@ export class UserListComponent {
 | `retryable()` | Retry avec backoff fixe ou exponentiel | retryWhen |
 | `fromStream()` | Écoute Observable/WebSocket/Firebase/Supabase | rxMethod + Effect |
 | `optimistic()` | Update immédiat + rollback automatique si échec | Manuel en NgRx |
+| `withPersist()` | Persistance state (localStorage/sessionStorage) + migration | Meta-reducers custom |
 
 ```ts
 import { abortable, debounced, throttled, retryable, fromStream, optimistic } from '@ngstato/core'
@@ -200,6 +190,14 @@ actions: {
   )
 }
 ```
+
+---
+
+## Nouveautés v0.2
+
+- `selectors` memoïzés avec recalcul ciblé
+- `effects` réactifs explicites avec cleanup
+- `withPersist()` pour hydrate/persist avec versioning
 
 ---
 
@@ -358,17 +356,17 @@ computed: {
 - Protection prod automatique via `isDevMode()`
 - **144 tests — 100% passing**
 
-### v0.2 — Helpers avancés
+### v0.2 — Selectors / Effects / Persist ✅
+- `selectors` memoïzés
+- `effects` réactifs avec cleanup
+- `withPersist()` — localStorage / sessionStorage + migration
+
+### v0.3 — Helpers avancés
 - `exclusive()` — = exhaustMap NgRx
 - `queued()` — = concatMap NgRx
 - `store.on()` — réactions inter-stores
 - Testing utilities
 - DevTools time-travel
-
-### v0.3 — Persistance
-- `withPersist()` — localStorage / sessionStorage / IndexedDB
-- `withHistory()` — undo/redo
-- SSR ready
 
 ### v1.0 — Production ready
 - `withEntities()`, Schematics CLI, ESLint plugin

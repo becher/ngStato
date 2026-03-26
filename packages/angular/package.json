@@ -1,6 +1,6 @@
 {
   "name": "@ngstato/angular",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "private": false,
   "description": "ngStato — Angular adapter with native Signals",
   "main":   "./dist/fesm2022/ngstato-angular.mjs",
@@ -22,7 +22,7 @@
     "dev":   "ng-packagr -p ng-package.json --watch"
   },
   "dependencies": {
-    "@ngstato/core": "^0.1.2"
+    "@ngstato/core": "^0.2.0"
   },
   "peerDependencies": {
     "@angular/core":   ">=17.0.0",
