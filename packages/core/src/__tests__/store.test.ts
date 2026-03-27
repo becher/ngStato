@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createStore } from '../store'
+import { createStore, on } from '../store'
 
 // ─────────────────────────────────────────────────────
 // TESTS — STATE DE BASE
@@ -44,6 +44,61 @@ describe('createStore — state de base', () => {
     // Le state interne ne change pas
     expect(store.getState().count).toBe(0)
     })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — store.on() (inter-stores)
+// ─────────────────────────────────────────────────────
+
+describe('on() — réactions inter-stores', () => {
+  it('écoute une action précise et ignore les autres stores', async () => {
+    const storeA = createStore({
+      count: 0,
+      actions: {
+        inc(state: any) { state.count++ }
+      }
+    })
+
+    const storeB = createStore({
+      count: 0,
+      actions: {
+        inc(state: any) { state.count++ }
+      }
+    })
+
+    const spy = vi.fn()
+    const unsubscribe = on(storeA.inc, (_store: any, event) => {
+      spy(event?.name, event?.status)
+    })
+
+    await storeA.inc()
+    await storeB.inc()
+
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledWith('inc', 'success')
+
+    unsubscribe()
+    await storeA.inc()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('status=error quand une action échoue', async () => {
+    const store = createStore({
+      actions: {
+        boom() {
+          throw new Error('boom')
+        }
+      }
+    })
+
+    const spy = vi.fn()
+    on(store.boom, (_store: any, event) => {
+      spy(event?.status, event?.error?.message)
+    })
+
+    await expect(store.boom()).rejects.toThrow('boom')
+    expect(spy).toHaveBeenCalledWith('error', 'boom')
+  })
 })
 
 // ─────────────────────────────────────────────────────

@@ -4,6 +4,7 @@
 
 // Store
 export { createStore }                          from './store'
+export { on }                                  from './store'
 
 // HTTP
 export { StatoHttp, createHttp, configureHttp, http } from './http'
@@ -16,6 +17,8 @@ export { throttled }                            from './helpers/throttled'
 export { retryable }                            from './helpers/retryable'
 export { fromStream }                           from './helpers/from-stream'
 export { optimistic }                           from './helpers/optimistic'
+export { exclusive }                           from './helpers/exclusive'
+export { queued }                               from './helpers/queued'
 export { withPersist }                          from './helpers/with-persist'
 
 // Types

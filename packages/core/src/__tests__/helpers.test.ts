@@ -10,6 +10,8 @@ import { retryable }  from '../helpers/retryable'
 import { fromStream } from '../helpers/from-stream'
 import { optimistic } from '../helpers/optimistic'
 import { withPersist } from '../helpers/with-persist'
+import { exclusive } from '../helpers/exclusive'
+import { queued }    from '../helpers/queued'
 import { createStore } from '../store'
 
 // ─────────────────────────────────────────────────────
@@ -118,7 +120,7 @@ describe('abortable()', () => {
   })
 
   it('remonte les erreurs non-AbortError', async () => {
-    const fn = abortable(async (state: any) => {
+    const fn = abortable(async (state: any, _query: string, _opts: any) => {
       throw new Error('vraie erreur')
     })
 
@@ -132,8 +134,8 @@ describe('abortable()', () => {
 
 describe('debounced()', () => {
 
-  beforeEach(() => vi.useFakeTimers())
-  afterEach(()  => vi.useRealTimers())
+  beforeEach(() => { void vi.useFakeTimers() })
+  afterEach(()  => { void vi.useRealTimers() })
 
   it('exécute l action après le délai', async () => {
     const fn     = vi.fn(async (state: any, v: string) => { state.value = v })
@@ -213,8 +215,8 @@ describe('debounced()', () => {
 
 describe('throttled()', () => {
 
-  beforeEach(() => vi.useFakeTimers())
-  afterEach(()  => vi.useRealTimers())
+  beforeEach(() => { void vi.useFakeTimers() })
+  afterEach(()  => { void vi.useRealTimers() })
 
   it('exécute immédiatement le premier appel', async () => {
     const fn     = vi.fn(async (state: any) => { state.count++ })
@@ -676,5 +678,96 @@ describe('withPersist()', () => {
     store.__store__.init(store)
 
     expect(store.count).toBe(7)
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — exclusive()
+// ─────────────────────────────────────────────────────
+
+describe('exclusive()', () => {
+  it('exécute une seule fois quand plusieurs appels arrivent pendant l\'exécution', async () => {
+    const calls: string[] = []
+    const fn = vi.fn(async (state: any, query: string) => {
+      calls.push(query)
+      await new Promise<void>(resolve => setTimeout(resolve, 30))
+      state.value = query
+    })
+
+    const action = exclusive(fn)
+    const state  = { value: '' }
+
+    const p1 = action(state, 'premier')
+    const p2 = action(state, 'deuxieme')
+
+    await Promise.all([p1, p2])
+
+    expect(calls).toEqual(['premier'])
+    expect(state.value).toBe('premier')
+    expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  it('réexécute après erreur', async () => {
+    const fn = vi.fn(async (_state: any, _query: string) => {
+      throw new Error('boom')
+    })
+
+    const action = exclusive(fn)
+    const state  = { value: '' }
+
+    await expect(action(state, 'a')).rejects.toThrow('boom')
+
+    ;(fn as any).mockImplementationOnce(async (_state: any, q: string) => {
+      state.value = q
+    })
+
+    await action(state, 'b')
+    expect(state.value).toBe('b')
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — queued()
+// ─────────────────────────────────────────────────────
+
+describe('queued()', () => {
+  it('exécute les appels dans l ordre d arrivée (concatMap)', async () => {
+    const calls: string[] = []
+    const fn = vi.fn(async (state: any, query: string) => {
+      calls.push(query)
+      await new Promise<void>(resolve => setTimeout(resolve, 30))
+      state.value = query
+    })
+
+    const action = queued(fn)
+    const state  = { value: '' }
+
+    const p1 = action(state, 'un')
+    const p2 = action(state, 'deux')
+
+    await Promise.all([p1, p2])
+
+    expect(calls).toEqual(['un', 'deux'])
+    expect(state.value).toBe('deux')
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  it('stoppe la file si une exécution échoue', async () => {
+    const fn = vi.fn(async (state: any, query: string) => {
+      if (query === 'un') throw new Error('boom')
+      state.value = query
+    })
+
+    const action = queued(fn)
+    const state  = { value: '' }
+
+    const p1 = action(state, 'un')
+    const p2 = action(state, 'deux')
+
+    await expect(p1).rejects.toThrow('boom')
+    await expect(p2).rejects.toThrow('boom')
+
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(state.value).toBe('')
   })
 })

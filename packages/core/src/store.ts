@@ -9,6 +9,7 @@ import type {
   StateSlice,
   EffectEntry
 } from './types'
+import { emitActionEvent, subscribeToAction } from './action-bus'
 
 // ─────────────────────────────────────────────────────
 // CLASSE INTERNE — jamais exposée directement
@@ -35,6 +36,7 @@ class StatoStore<S extends object> {
   // Les hooks lifecycle
   private _hooks: StatoHooks<any>
   private _publicStore: any = null
+  private _publicActions: Record<string, Function> = {}
   private _effects: Array<{
     deps: (state: StateSlice<S>) => unknown | unknown[]
     run: Function
@@ -215,6 +217,8 @@ async dispatch(actionName: string, ...args: unknown[]) {
     throw new Error(`[Stato] Action "${actionName}" introuvable`)
   }
 
+  const publicAction = this._publicActions[actionName]
+
   // Hook onAction — avant l'exécution
   this._hooks.onAction?.(actionName, args)
 
@@ -233,14 +237,38 @@ async dispatch(actionName: string, ...args: unknown[]) {
     await action(stateProxy, ...args)
 
     // Hook onActionDone — après l'exécution
-    this._hooks.onActionDone?.(actionName, Date.now() - start)
+    const duration = Date.now() - start
+    this._hooks.onActionDone?.(actionName, duration)
 
     // Hook onStateChange — si le state a changé
     this._hooks.onStateChange?.(prevState as any, { ...this._state } as any)
 
+    if (publicAction) {
+      emitActionEvent({
+        action: publicAction,
+        name: actionName,
+        args,
+        store: this._publicStore,
+        status: 'success',
+        duration
+      })
+    }
+
   } catch (error) {
     // Hook onError — si une erreur est lancée
     this._hooks.onError?.(error as Error, actionName)
+
+    if (publicAction) {
+      emitActionEvent({
+        action: publicAction,
+        name: actionName,
+        args,
+        store: this._publicStore,
+        status: 'error',
+        duration: Date.now() - start,
+        error: error as Error
+      })
+    }
     throw error   // on remonte l'erreur quand même
   }
 }
@@ -261,6 +289,10 @@ async dispatch(actionName: string, ...args: unknown[]) {
   // ── Enregistrer un cleanup (pour fromStream) ───────
   registerCleanup(fn: () => void) {
     this._cleanups.push(fn)
+  }
+
+  registerPublicAction(name: string, fn: Function) {
+    this._publicActions[name] = fn
   }
 
   hydrate(partial: Partial<StateSlice<S>>) {
@@ -335,7 +367,9 @@ export function createStore<S extends object>(config: S & StatoStoreConfig<S>) {
 
   if (actions) {
     for (const name of Object.keys(actions)) {
-      publicStore[name] = (...args: unknown[]) => store.dispatch(name, ...args)
+      const fn = (...args: unknown[]) => store.dispatch(name, ...args)
+      publicStore[name] = fn
+      store.registerPublicAction(name, fn)
     }
   }
 
@@ -371,9 +405,20 @@ export function createStore<S extends object>(config: S & StatoStoreConfig<S>) {
 
 export function on<S extends object>(
   sourceAction: Function,
-  handler: (state: S) => void | Promise<void>
+  handler: (store: S, event?: { name: string; args: unknown[]; status: 'success' | 'error'; duration: number; error?: Error }) => void | Promise<void>
 ) {
-  // Sera implémenté dans v0.2
-  // après que le core soit stable
-  console.warn('[Stato] store.on() disponible en v0.2')
+  return subscribeToAction(sourceAction, (event) => {
+    try {
+      // handler(store) compatible + handler(store, event) plus riche
+      void handler(event.store as S, {
+        name: event.name,
+        args: event.args,
+        status: event.status,
+        duration: event.duration,
+        error: event.error
+      })
+    } catch {
+      // ignore
+    }
+  })
 }

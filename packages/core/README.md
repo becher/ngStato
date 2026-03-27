@@ -40,6 +40,34 @@ console.log(store.users)   // User[]
 console.log(store.total)   // number (selector memoïzé)
 ```
 
+## Réactions inter-stores (`on`)
+
+Écouter la fin d’exécution d’une action précise (success **ou** error) et réagir ailleurs (toast, analytics, déclencher une autre action, etc.).
+
+```ts
+import { createStore, on } from '@ngstato/core'
+
+const userStore = createStore({
+  users: [] as { id: string; name: string }[],
+  actions: {
+    async loadUsers(state) {
+      state.users = await fetch('/api/users').then(r => r.json())
+    }
+  }
+})
+
+const unsubscribe = on(userStore.loadUsers, (_store, event) => {
+  if (event?.status === 'success') {
+    console.log(`[users] loaded in ${event.duration}ms`)
+  } else {
+    console.error('[users] load failed:', event?.error)
+  }
+})
+
+// Plus tard…
+unsubscribe()
+```
+
 ## Helpers
 
 | Helper | Description |
@@ -47,7 +75,9 @@ console.log(store.total)   // number (selector memoïzé)
 | `abortable()` | Annule la requête précédente si l'action est rappelée |
 | `debounced()` | Debounce sans RxJS |
 | `throttled()` | Throttle sans RxJS |
+| `exclusive()` | Ignore les nouveaux appels pendant qu'une exécution est en cours |
 | `retryable()` | Retry avec backoff fixe ou exponentiel |
+| `queued()` | Met en file et exécute les appels dans l'ordre d'arrivée |
 | `fromStream()` | Realtime — WebSocket, Firebase, Supabase |
 | `optimistic()` | Optimistic update + rollback automatique |
 | `withPersist()` | Persistance localStorage/sessionStorage + migration |
