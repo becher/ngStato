@@ -25,3 +25,13 @@ actions: {
 }
 ```
 
+## When to use streams
+
+- External push-based systems (WebSocket, event bus)
+- Complex event composition (switch/merge/concat/exhaust behaviors)
+- Incremental migration from existing RxJS-heavy code
+
+## When not to use streams
+
+If plain actions + selectors solve the use case, keep it state-first and avoid unnecessary complexity.
+

@@ -11,5 +11,14 @@ Match NgRx capabilities for real apps, with simpler API and less code.
 3. Core-first architecture for multi-framework support.
 4. Strong semantics via tests before marketing claims.
 
+## Documentation direction
+
+Build a complete, modern documentation experience:
+
+- concept-driven guides
+- practical recipes
+- migration playbooks
+- benchmark methodology and results
+
 See `README-SPECD.md` in repo root for detailed roadmap and implementation notes.
 

@@ -6,27 +6,46 @@
 npm install @ngstato/core @ngstato/angular
 ```
 
-## Core usage
+## Create your first store
 
 ```ts
 import { createStore } from '@ngstato/core'
 
 const store = createStore({
-  count: 0,
+  count: 0 as number,
+  loading: false,
   actions: {
     inc(state) {
       state.count++
+    },
+    async load(state) {
+      state.loading = true
+      await new Promise((r) => setTimeout(r, 300))
+      state.loading = false
     }
+  },
+  selectors: {
+    doubled: (state) => state.count * 2
   }
 })
 
 await store.inc()
 console.log(store.count)
+console.log(store.doubled)
 ```
 
-## Next
+## Angular integration
 
-- [Core Concepts](/guide/core-concepts)
-- [Streams (Optional)](/guide/streams)
-- [Entities](/guide/entities)
+```ts
+import { provideStato } from '@ngstato/angular'
+
+provideStato({ devtools: true })
+```
+
+## Next steps
+
+- Read [Core Concepts](https://becher.github.io/ngStato/guide/core-concepts)
+- Learn [Architecture](https://becher.github.io/ngStato/guide/architecture)
+- Scale with [Entities](https://becher.github.io/ngStato/guide/entities)
+- Explore [CRUD Recipe](https://becher.github.io/ngStato/recipes/crud)
 
