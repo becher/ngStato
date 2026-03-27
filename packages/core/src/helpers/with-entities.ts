@@ -1,4 +1,4 @@
-import type { StatoStoreConfig, StateSlice, SelectorFn, ActionsMap } from '../types'
+import type { StatoStoreConfig, ActionsMap } from '../types'
 import type {
   EntityId,
   EntityState,
@@ -62,10 +62,6 @@ function cloneEntityState<T>(state: EntityState<T>): EntityState<T> {
   }
 }
 
-function cap(s: string) {
-  return s ? s[0].toUpperCase() + s.slice(1) : s
-}
-
 export function withEntities<S extends object, T>(
   config: S & StatoStoreConfig<S>,
   options: WithEntitiesOptions<T>
@@ -102,8 +98,10 @@ export function withEntities<S extends object, T>(
     removeAll: options.actions?.removeAll ?? `${key}RemoveAll`
   }
 
-  const nextSelectors: Record<string, SelectorFn<any>> = {
-    ...baseSelectors,
+  // Note: `selectors` dans le core autorise (fn | unknown[]), donc on garde
+  // le type large pour rester compatible DTS/build.
+  const nextSelectors: NonNullable<StatoStoreConfig<any>['selectors']> = {
+    ...(baseSelectors as any),
     [selectorNames.ids]: (state: any) => scopedSelectors.selectIds(state),
     [selectorNames.entities]: (state: any) => scopedSelectors.selectEntities(state),
     [selectorNames.all]: (state: any) => scopedSelectors.selectAll(state),
