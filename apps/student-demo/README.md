@@ -25,3 +25,25 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Démo `exclusive()` vs `queued()`
+
+`apps/student-demo` inclut une mini-démo interactive sur la page `StudentsPageComponent` pour comparer :
+
+- `exclusive()` (équivalent `exhaustMap`) : le 2e appel est ignoré pendant qu'une requête tourne
+- `queued()` (équivalent `concatMap`) : les appels sont exécutés dans l'ordre d'arrivée
+
+Les actions correspondantes sont dans `apps/student-demo/src/app/features/students/store/student.store.ts` :
+
+```ts
+searchRemoteExclusive: exclusive(async (state, query) => { /* ... */ }),
+searchRemoteQueued:    queued(async (state, query) => { /* ... */ }),
+```
+
+## Démo `on()` (réactions inter-stores)
+
+La même page illustre aussi `on(action, handler)` (exporté par `@ngstato/core`) :
+
+- À chaque fin d’exécution de `searchRemoteExclusive` / `searchRemoteQueued` (success ou error), un toast est déclenché automatiquement.
+- Exemple dans `apps/student-demo/src/app/features/students/pages/students-page/students-page.component.ts`.
+

@@ -3,9 +3,11 @@ import {
   createStore,
   abortable,
   debounced,
+  exclusive,
   optimistic,
   fromStream,
   retryable,
+  queued,
   connectDevTools,
   withPersist
 } from '@ngstato/core'
@@ -126,6 +128,35 @@ export function createStudentStore(service: StudentService) {
           state.isLoading = false
         }
       ),
+
+      // Démo async helpers — exclusive vs queued
+      // exclusive : ignore les appels pendant l'exécution courante
+      searchRemoteExclusive: exclusive(async (state: any, query: string) => {
+        if (!query.trim()) {
+          state.searchQuery = ''
+          return
+        }
+
+        state.isLoading = true
+        await new Promise<void>(resolve => setTimeout(resolve, 600))
+        state.students = await service.search(query)
+        state.searchQuery = query
+        state.isLoading = false
+      }),
+
+      // queued : exécute les appels dans l'ordre d'arrivée
+      searchRemoteQueued: queued(async (state: any, query: string) => {
+        if (!query.trim()) {
+          state.searchQuery = ''
+          return
+        }
+
+        state.isLoading = true
+        await new Promise<void>(resolve => setTimeout(resolve, 600))
+        state.students = await service.search(query)
+        state.searchQuery = query
+        state.isLoading = false
+      }),
 
       listenNotifications: fromStream(
         (_state: any) => ({
