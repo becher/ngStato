@@ -37,6 +37,7 @@ class StatoStore<S extends object> {
   private _hooks: StatoHooks<any>
   private _publicStore: any = null
   private _publicActions: Record<string, Function> = {}
+  private _initialized = false
   private _effects: Array<{
     deps: (state: StateSlice<S>) => unknown | unknown[]
     run: Function
@@ -307,7 +308,10 @@ async dispatch(actionName: string, ...args: unknown[]) {
   // ── Lifecycle — appelé par l'adaptateur Angular ────
   init(publicStore: any) {
     this._publicStore = publicStore
-    this._hooks.onInit?.(publicStore)
+    if (!this._initialized) {
+      this._initialized = true
+      this._hooks.onInit?.(publicStore)
+    }
     this._runEffects(true)
   }
 
@@ -323,6 +327,7 @@ async dispatch(actionName: string, ...args: unknown[]) {
     }
     this._cleanups = []
     this._subscribers.clear()
+    this._initialized = false
   }
 }
 
@@ -394,7 +399,8 @@ export function createStore<S extends object>(config: S & StatoStoreConfig<S>) {
     }
   }
 
-  store.setPublicStore(publicStore)
+  // Initialiser automatiquement (onInit + premier run effects)
+  store.init(publicStore)
 
   return publicStore
 }

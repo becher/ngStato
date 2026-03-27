@@ -77,11 +77,9 @@ export function createAngularStore<S extends object>(
     }
   }
 
-  // 8. Appeler onInit si défini
-  const { hooks } = config as StatoStoreConfig<S>
-  if (hooks?.onInit) {
-    hooks.onInit(angularStore)
-  }
+  // 8. Unifier le lifecycle avec @ngstato/core
+  // (init est idempotent: onInit ne sera appelé qu'une fois)
+  coreStore.__store__.init(angularStore)
 
   // 9. Exposer destroy pour le cleanup
   angularStore.__destroy__ = () => {
