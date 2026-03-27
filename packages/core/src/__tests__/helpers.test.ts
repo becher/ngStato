@@ -14,6 +14,7 @@ import { exclusive } from '../helpers/exclusive'
 import { queued }    from '../helpers/queued'
 import { distinctUntilChanged } from '../helpers/distinct-until-changed'
 import { combineLatest } from '../helpers/combine-latest'
+import { combineLatestStream } from '../helpers/combine-latest-stream'
 import { forkJoin } from '../helpers/fork-join'
 import { race } from '../helpers/race'
 import { createStore } from '../store'
@@ -815,6 +816,82 @@ describe('combineLatest()', () => {
     )
 
     expect(deps({ a: 1, b: 2 })).toEqual([1, 2, 3])
+  })
+})
+
+describe('combineLatestStream()', () => {
+  function createSubject<T>() {
+    const observers = new Set<{
+      next?: (v: T) => void
+      error?: (e: unknown) => void
+      complete?: () => void
+    }>()
+
+    return {
+      observable: {
+        subscribe(observer: any) {
+          observers.add(observer)
+          return { unsubscribe: () => observers.delete(observer) }
+        }
+      },
+      next(v: T) {
+        observers.forEach(o => o.next?.(v))
+      },
+      error(e: unknown) {
+        observers.forEach(o => o.error?.(e))
+      },
+      complete() {
+        observers.forEach(o => o.complete?.())
+      }
+    }
+  }
+
+  it('n émet qu après que toutes les sources ont émis au moins une fois', () => {
+    const a = createSubject<number>()
+    const b = createSubject<string>()
+
+    const emitted: Array<[number, string]> = []
+    const combined = combineLatestStream(a.observable as any, b.observable as any)
+    const sub = combined.subscribe({
+      next: (v) => emitted.push(v as any)
+    })
+
+    a.next(1)
+    expect(emitted).toEqual([])
+
+    b.next('x')
+    expect(emitted).toEqual([[1, 'x']])
+
+    a.next(2)
+    expect(emitted).toEqual([[1, 'x'], [2, 'x']])
+
+    sub.unsubscribe()
+  })
+
+  it('propage error et se ferme', () => {
+    const a = createSubject<number>()
+    const b = createSubject<string>()
+
+    const errors: unknown[] = []
+    const emitted: any[] = []
+
+    const sub = combineLatestStream(a.observable as any, b.observable as any).subscribe({
+      next: (v) => emitted.push(v),
+      error: (e) => errors.push(e)
+    })
+
+    a.next(1)
+    b.error(new Error('boom'))
+
+    // Après error, on ne doit plus émettre
+    b.next('x')
+    a.next(2)
+
+    expect(errors).toHaveLength(1)
+    expect((errors[0] as Error).message).toBe('boom')
+    expect(emitted).toEqual([])
+
+    sub.unsubscribe()
   })
 })
 

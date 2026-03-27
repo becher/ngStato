@@ -82,6 +82,7 @@ unsubscribe()
 | `forkJoin()` | Lance des tâches en parallèle, attend tout |
 | `race()` | Retourne la première tâche terminée |
 | `combineLatest()` | Compose plusieurs deps pour `effects` |
+| `combineLatestStream()` | Combine plusieurs flux externes (compatible RxJS) |
 | `fromStream()` | Realtime — WebSocket, Firebase, Supabase |
 | `optimistic()` | Optimistic update + rollback automatique |
 | `withPersist()` | Persistance localStorage/sessionStorage + migration |
