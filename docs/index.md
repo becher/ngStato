@@ -8,13 +8,13 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /ngStato/guide/getting-started
+      link: /guide/getting-started
     - theme: alt
       text: Migration from NgRx
-      link: /ngStato/migration/ngrx-to-ngstato
+      link: /migration/ngrx-to-ngstato
     - theme: alt
       text: API Reference
-      link: /ngStato/api/core
+      link: /api/core
 
 features:
   - title: State-first by design

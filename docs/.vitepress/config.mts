@@ -7,51 +7,51 @@ export default defineConfig({
   cleanUrls: true,
   themeConfig: {
     nav: [
-      { text: 'Guide', link: '/ngStato/guide/getting-started' },
-      { text: 'Recipes', link: '/ngStato/recipes/crud' },
-      { text: 'Migration', link: '/ngStato/migration/ngrx-to-ngstato' },
-      { text: 'API', link: '/ngStato/api/core' },
-      { text: 'Benchmarks', link: '/ngStato/benchmarks/overview' },
-      { text: 'Strategy', link: '/ngStato/strategy' }
+      { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Recipes', link: '/recipes/crud' },
+      { text: 'Migration', link: '/migration/ngrx-to-ngstato' },
+      { text: 'API', link: '/api/core' },
+      { text: 'Benchmarks', link: '/benchmarks/overview' },
+      { text: 'Strategy', link: '/strategy' }
     ],
     sidebar: [
       {
         text: 'Guide',
         items: [
-          { text: 'Getting Started', link: '/ngStato/guide/getting-started' },
-          { text: 'Core Concepts', link: '/ngStato/guide/core-concepts' },
-          { text: 'Architecture', link: '/ngStato/guide/architecture' },
-          { text: 'Angular', link: '/ngStato/guide/angular' },
-          { text: 'Streams (Optional)', link: '/ngStato/guide/streams' },
-          { text: 'Entities', link: '/ngStato/guide/entities' },
-          { text: 'Testing', link: '/ngStato/guide/testing' }
+          { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Core Concepts', link: '/guide/core-concepts' },
+          { text: 'Architecture', link: '/guide/architecture' },
+          { text: 'Angular', link: '/guide/angular' },
+          { text: 'Streams (Optional)', link: '/guide/streams' },
+          { text: 'Entities', link: '/guide/entities' },
+          { text: 'Testing', link: '/guide/testing' }
         ]
       },
       {
         text: 'Recipes',
         items: [
-          { text: 'CRUD Feature Store', link: '/ngStato/recipes/crud' },
-          { text: 'Pagination + Cache', link: '/ngStato/recipes/pagination-cache' },
-          { text: 'Error + Retry Flows', link: '/ngStato/recipes/error-retry' }
+          { text: 'CRUD Feature Store', link: '/recipes/crud' },
+          { text: 'Pagination + Cache', link: '/recipes/pagination-cache' },
+          { text: 'Error + Retry Flows', link: '/recipes/error-retry' }
         ]
       },
       {
         text: 'Migration',
         items: [
-          { text: 'NgRx to ngStato', link: '/ngStato/migration/ngrx-to-ngstato' }
+          { text: 'NgRx to ngStato', link: '/migration/ngrx-to-ngstato' }
         ]
       },
       {
         text: 'API',
         items: [
-          { text: 'Core', link: '/ngStato/api/core' },
-          { text: 'Helpers', link: '/ngStato/api/helpers' }
+          { text: 'Core', link: '/api/core' },
+          { text: 'Helpers', link: '/api/helpers' }
         ]
       },
       {
         text: 'Benchmarks',
         items: [
-          { text: 'Overview', link: '/ngStato/benchmarks/overview' }
+          { text: 'Overview', link: '/benchmarks/overview' }
         ]
       }
     ],

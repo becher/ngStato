@@ -44,8 +44,8 @@ provideStato({ devtools: true })
 
 ## Next steps
 
-- Read [Core Concepts](https://becher.github.io/ngStato/guide/core-concepts)
-- Learn [Architecture](https://becher.github.io/ngStato/guide/architecture)
-- Scale with [Entities](https://becher.github.io/ngStato/guide/entities)
-- Explore [CRUD Recipe](https://becher.github.io/ngStato/recipes/crud)
+- Read [Core Concepts](/guide/core-concepts)
+- Learn [Architecture](/guide/architecture)
+- Scale with [Entities](/guide/entities)
+- Explore [CRUD Recipe](/recipes/crud)
 
