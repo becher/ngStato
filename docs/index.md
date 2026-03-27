@@ -7,8 +7,8 @@ hero:
   tagline: "A modern state management toolkit with enterprise patterns and less boilerplate than NgRx."
   actions:
     - theme: brand
-      text: Get Started
-      link: /guide/getting-started
+      text: Start in 5 min
+      link: /guide/start-in-5-min
     - theme: alt
       text: Migration from NgRx
       link: /migration/ngrx-to-ngstato

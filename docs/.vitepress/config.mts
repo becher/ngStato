@@ -7,6 +7,7 @@ export default defineConfig({
   cleanUrls: true,
   themeConfig: {
     nav: [
+      { text: 'Start in 5 min', link: '/guide/start-in-5-min' },
       { text: 'Guide', link: '/guide/getting-started' },
       { text: 'Recipes', link: '/recipes/crud' },
       { text: 'Migration', link: '/migration/ngrx-to-ngstato' },
@@ -19,12 +20,16 @@ export default defineConfig({
         text: 'Guide',
         items: [
           { text: 'Getting Started', link: '/guide/getting-started' },
+          { text: 'Start in 5 min', link: '/guide/start-in-5-min' },
           { text: 'Core Concepts', link: '/guide/core-concepts' },
           { text: 'Architecture', link: '/guide/architecture' },
           { text: 'Angular', link: '/guide/angular' },
           { text: 'Streams (Optional)', link: '/guide/streams' },
+          { text: 'Auth and Session', link: '/guide/auth-session' },
+          { text: 'WebSockets', link: '/guide/websockets' },
           { text: 'Entities', link: '/guide/entities' },
-          { text: 'Testing', link: '/guide/testing' }
+          { text: 'Testing', link: '/guide/testing' },
+          { text: 'Common Mistakes', link: '/guide/common-mistakes' }
         ]
       },
       {
@@ -32,7 +37,14 @@ export default defineConfig({
         items: [
           { text: 'CRUD Feature Store', link: '/recipes/crud' },
           { text: 'Pagination + Cache', link: '/recipes/pagination-cache' },
-          { text: 'Error + Retry Flows', link: '/recipes/error-retry' }
+          { text: 'Error + Retry Flows', link: '/recipes/error-retry' },
+          { text: 'Optimistic Update', link: '/recipes/optimistic-update' }
+        ]
+      },
+      {
+        text: 'Cookbook',
+        items: [
+          { text: 'Project Templates', link: '/cookbook/project-templates' }
         ]
       },
       {
