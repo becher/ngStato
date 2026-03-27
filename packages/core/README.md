@@ -83,6 +83,7 @@ unsubscribe()
 | `race()` | Retourne la première tâche terminée |
 | `combineLatest()` | Compose plusieurs deps pour `effects` |
 | `combineLatestStream()` | Combine plusieurs flux externes (compatible RxJS) |
+| `pipeStream()` + operators | Composable streams (`map`, `filter`, `distinctUntilChanged`, `debounce`, `throttle`, `switchMap`, `concatMap`, `exhaustMap`, `mergeMap`, `catchError`, `retry`) |
 | `fromStream()` | Realtime — WebSocket, Firebase, Supabase |
 | `optimistic()` | Optimistic update + rollback automatique |
 | `withPersist()` | Persistance localStorage/sessionStorage + migration |

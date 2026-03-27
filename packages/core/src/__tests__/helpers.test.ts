@@ -15,6 +15,20 @@ import { queued }    from '../helpers/queued'
 import { distinctUntilChanged } from '../helpers/distinct-until-changed'
 import { combineLatest } from '../helpers/combine-latest'
 import { combineLatestStream } from '../helpers/combine-latest-stream'
+import {
+  pipeStream,
+  mapStream,
+  filterStream,
+  distinctUntilChangedStream,
+  debounceStream,
+  throttleStream,
+  switchMapStream,
+  concatMapStream,
+  exhaustMapStream,
+  mergeMapStream,
+  catchErrorStream,
+  retryStream
+} from '../helpers/stream-operators'
 import { forkJoin } from '../helpers/fork-join'
 import { race } from '../helpers/race'
 import { createStore } from '../store'
@@ -927,5 +941,250 @@ describe('race()', () => {
     ])
 
     expect(result).toBe(1)
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — stream operators (pipe/switch/concat/exhaust/merge)
+// ─────────────────────────────────────────────────────
+
+describe('stream operators', () => {
+  function createSubject<T>() {
+    const observers = new Set<{
+      next?: (v: T) => void
+      error?: (e: unknown) => void
+      complete?: () => void
+    }>()
+
+    return {
+      observable: {
+        subscribe(observer: any) {
+          observers.add(observer)
+          return { unsubscribe: () => observers.delete(observer) }
+        }
+      },
+      next(v: T) {
+        observers.forEach((o) => o.next?.(v))
+      },
+      error(e: unknown) {
+        observers.forEach((o) => o.error?.(e))
+      },
+      complete() {
+        observers.forEach((o) => o.complete?.())
+      }
+    }
+  }
+
+  it('pipeStream compose map + filter', () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(
+      src.observable as any,
+      mapStream((v) => v * 2),
+      filterStream((v) => v > 4)
+    )
+
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+    src.next(1)
+    src.next(2)
+    src.next(3)
+    expect(out).toEqual([6])
+    sub.unsubscribe()
+  })
+
+  it('switchMapStream garde seulement le dernier flux actif', async () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(
+      src.observable as any,
+      switchMapStream((v, { signal }) => ({
+        subscribe(observer: any) {
+          const timer = setTimeout(() => observer.next?.(v), 20)
+          signal.addEventListener('abort', () => clearTimeout(timer), { once: true })
+          return { unsubscribe: () => clearTimeout(timer) }
+        }
+      }))
+    )
+
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+    src.next(1)
+    src.next(2)
+    await new Promise((r) => setTimeout(r, 40))
+    expect(out).toEqual([2])
+    sub.unsubscribe()
+  })
+
+  it('concatMapStream respecte l ordre des entrées', async () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(
+      src.observable as any,
+      concatMapStream((v) => new Promise<number>((resolve) => {
+        setTimeout(() => resolve(v), 15)
+      }))
+    )
+
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+    src.next(1)
+    src.next(2)
+    src.next(3)
+
+    await new Promise((r) => setTimeout(r, 90))
+    expect(out).toEqual([1, 2, 3])
+    sub.unsubscribe()
+  })
+
+  it('exhaustMapStream ignore les nouvelles entrées pendant une exécution', async () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(
+      src.observable as any,
+      exhaustMapStream((v) => new Promise<number>((resolve) => {
+        setTimeout(() => resolve(v), 20)
+      }))
+    )
+
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+    src.next(1)
+    src.next(2)
+    src.next(3)
+    await new Promise((r) => setTimeout(r, 30))
+    src.next(4)
+    await new Promise((r) => setTimeout(r, 30))
+
+    expect(out).toEqual([1, 4])
+    sub.unsubscribe()
+  })
+
+  it('mergeMapStream lance les tâches en parallèle', async () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(
+      src.observable as any,
+      mergeMapStream((v) => new Promise<number>((resolve) => {
+        const delay = v === 1 ? 30 : 10
+        setTimeout(() => resolve(v), delay)
+      }))
+    )
+
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+    src.next(1)
+    src.next(2)
+    await new Promise((r) => setTimeout(r, 50))
+
+    // 2 finit avant 1 (parallèle)
+    expect(out).toEqual([2, 1])
+    sub.unsubscribe()
+  })
+
+  it('distinctUntilChangedStream ignore les valeurs identiques', () => {
+    const src = createSubject<string>()
+    const out: string[] = []
+
+    const stream = pipeStream(
+      src.observable as any,
+      distinctUntilChangedStream((v) => v.trim().toLowerCase())
+    )
+
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+    src.next('Alice')
+    src.next(' alice ')
+    src.next('BOB')
+    expect(out).toEqual(['Alice', 'BOB'])
+    sub.unsubscribe()
+  })
+
+  it('debounceStream n émet que la dernière valeur de la rafale', async () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(src.observable as any, debounceStream(20))
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+
+    src.next(1)
+    src.next(2)
+    src.next(3)
+    await new Promise((r) => setTimeout(r, 35))
+    expect(out).toEqual([3])
+    sub.unsubscribe()
+  })
+
+  it('throttleStream émet au plus une fois par fenêtre', async () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+
+    const stream = pipeStream(src.observable as any, throttleStream(20))
+    const sub = stream.subscribe({ next: (v) => out.push(v) })
+
+    src.next(1)
+    src.next(2)
+    src.next(3)
+    await new Promise((r) => setTimeout(r, 25))
+    src.next(4)
+    await new Promise((r) => setTimeout(r, 25))
+
+    expect(out).toEqual([1, 4])
+    sub.unsubscribe()
+  })
+
+  it('catchErrorStream récupère et remplace la valeur en erreur', () => {
+    const src = createSubject<number>()
+    const out: number[] = []
+    let completed = false
+
+    const stream = pipeStream(
+      src.observable as any,
+      catchErrorStream(() => 999)
+    )
+
+    const sub = stream.subscribe({
+      next: (v) => out.push(v),
+      complete: () => { completed = true }
+    })
+
+    src.next(1)
+    src.error(new Error('boom'))
+
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        expect(out).toEqual([1, 999])
+        expect(completed).toBe(true)
+        sub.unsubscribe()
+        resolve()
+      }, 0)
+    })
+  })
+
+  it('retryStream relance la source jusqu au succès', async () => {
+    let calls = 0
+    const flaky = {
+      subscribe(observer: any) {
+        calls++
+        if (calls < 2) {
+          observer.error?.(new Error('retry'))
+        } else {
+          observer.next?.(42)
+          observer.complete?.()
+        }
+        return { unsubscribe() {} }
+      }
+    }
+
+    const out: number[] = []
+    let done = false
+    pipeStream(flaky as any, retryStream({ attempts: 3, delay: 0 })).subscribe({
+      next: (v: number) => out.push(v),
+      complete: () => { done = true }
+    })
+
+    await new Promise((r) => setTimeout(r, 10))
+    expect(calls).toBe(2)
+    expect(out).toEqual([42])
+    expect(done).toBe(true)
   })
 })

@@ -24,6 +24,20 @@ export { forkJoin }                             from './helpers/fork-join'
 export { race }                                 from './helpers/race'
 export { combineLatest }                        from './helpers/combine-latest'
 export { combineLatestStream }                  from './helpers/combine-latest-stream'
+export {
+  pipeStream,
+  mapStream,
+  filterStream,
+  distinctUntilChangedStream,
+  debounceStream,
+  throttleStream,
+  switchMapStream,
+  concatMapStream,
+  exhaustMapStream,
+  mergeMapStream,
+  catchErrorStream,
+  retryStream
+}                                               from './helpers/stream-operators'
 export { withPersist }                          from './helpers/with-persist'
 
 // Types
