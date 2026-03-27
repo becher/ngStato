@@ -5,12 +5,16 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
-    "dev": "turbo run dev"
+    "dev": "turbo run dev",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@swc/core": "^1.15.18",
     "turbo": "latest",
     "typescript": "^5.4.0",
+    "vitepress": "^1.6.4",
     "vitest": "^1.6.0"
   },
   "packageManager": "pnpm@10.32.1",
