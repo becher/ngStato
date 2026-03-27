@@ -25,6 +25,7 @@ export { race }                                 from './helpers/race'
 export { combineLatest }                        from './helpers/combine-latest'
 export { combineLatestStream }                  from './helpers/combine-latest-stream'
 export { createEntityAdapter }                  from './helpers/entity-adapter'
+export { withEntities }                         from './helpers/with-entities'
 export {
   pipeStream,
   mapStream,
@@ -41,6 +42,7 @@ export {
 }                                               from './helpers/stream-operators'
 export { withPersist }                          from './helpers/with-persist'
 export type { EntityId, EntityState, Update, EntityAdapterOptions } from './helpers/entity-adapter'
+export type { WithEntitiesOptions }             from './helpers/with-entities'
 
 // Types
 export type {

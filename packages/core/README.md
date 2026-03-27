@@ -82,6 +82,7 @@ unsubscribe()
 | `forkJoin()` | Lance des tâches en parallèle, attend tout |
 | `race()` | Retourne la première tâche terminée |
 | `createEntityAdapter()` | Collections normalisées (ids/entities) + CRUD/selectors |
+| `withEntities()` | Injecte une slice entities + actions/selectors générés |
 | `combineLatest()` | Compose plusieurs deps pour `effects` |
 | `combineLatestStream()` | Combine plusieurs flux externes (compatible RxJS) |
 | `pipeStream()` + operators | Composable streams (`map`, `filter`, `distinctUntilChanged`, `debounce`, `throttle`, `switchMap`, `concatMap`, `exhaustMap`, `mergeMap`, `catchError`, `retry`) |
