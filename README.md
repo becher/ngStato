@@ -2,8 +2,8 @@
 
 > Stato est une librairie de gestion d'état Angular moderne pour remplacer NgRx complètement, avec une API plus simple, Signals-first, sans RxJS obligatoire.
 
-![version](https://img.shields.io/badge/version-0.2.0-blue)
-![tests](https://img.shields.io/badge/tests-144%20%E2%9C%85-green)
+![version](https://img.shields.io/badge/version-0.3.0-blue)
+![tests](https://img.shields.io/badge/tests-passing-green)
 ![bundle](https://img.shields.io/badge/bundle-~3KB-yellow)
 ![angular](https://img.shields.io/badge/Angular-17%2B-red)
 ![license](https://img.shields.io/badge/license-MIT-lightgrey)
@@ -158,6 +158,9 @@ export class UserListComponent {
 | `exclusive()` | Ignore les nouveaux appels pendant qu'une exécution est en cours | exhaustMap |
 | `retryable()` | Retry avec backoff fixe ou exponentiel | retryWhen |
 | `queued()` | Met en file et exécute les appels dans l'ordre d'arrivée | concatMap |
+| `createEntityAdapter()` | Collections normalisées (ids/entities) + CRUD/selectors | NgRx Entity Adapter |
+| `withEntities()` | Wrapper de config pour injecter slice entities + actions/selectors | feature + adapter entity |
+| `pipeStream()` + operators | Streams composables sans RxJS obligatoire | pipe + operators RxJS |
 | `fromStream()` | Écoute Observable/WebSocket/Firebase/Supabase | rxMethod + Effect |
 | `optimistic()` | Update immédiat + rollback automatique si échec | Manuel en NgRx |
 | `withPersist()` | Persistance state (localStorage/sessionStorage) + migration | Meta-reducers custom |
@@ -326,7 +329,7 @@ computed: {
 
 ## Comparaison NgRx SignalStore v20 vs ngStato
 
-| Feature | NgRx SignalStore v20 | ngStato v0.1 |
+| Feature | NgRx SignalStore v20 | ngStato v0.3 |
 |---------|---------------------|--------------|
 | withState | ✅ | ✅ |
 | withMethods / actions | ✅ rxMethod requis | ✅ async/await |
@@ -340,8 +343,11 @@ computed: {
 | Protection prod | ⚠️ logOnly manuel | ✅ isDevMode() auto |
 | RxJS requis | ✅ obligatoire | ❌ optionnel |
 | Bundle size | ~50 KB gzip | ~3 KB gzip |
-| withProps | ✅ | 🔜 v0.2 |
-| withEntities | ✅ | 🔜 v1.0 |
+| withProps | ✅ | 🔜 |
+| withEntities | ✅ | ✅ (`createEntityAdapter` + `withEntities`) |
+| Concurrency helpers | ✅ via RxJS operators | ✅ (`abortable`, `exclusive`, `queued`) |
+| Async composition | ✅ via RxJS (`forkJoin`, `race`) | ✅ (`forkJoin`, `race`) |
+| Stream operators | ✅ RxJS complet | ✅ `pipeStream` + operators (RxJS optionnel) |
 | signalStoreFeature() | ✅ | 🔜 v0.4 |
 | Schematics CLI | ✅ | 🔜 v1.0 |
 | ESLint plugin | ✅ | 🔜 v1.0 |
@@ -353,6 +359,11 @@ computed: {
 <a href="https://stackblitz.com/github/becher/ngstato-demo" target="_blank" rel="noopener">
   <img src="https://developer.stackblitz.com/img/open_in_stackblitz.svg" alt="Open in StackBlitz">
 </a>
+
+## Documentation
+
+- Spécification détaillée: [`README-SPECD.md`](./README-SPECD.md)
+- Site docs (GitHub Pages): [becher.github.io/ngstato](https://becher.github.io/ngstato/)
 
 ---
 
@@ -373,7 +384,7 @@ computed: {
 - `effects` réactifs avec cleanup
 - `withPersist()` — localStorage / sessionStorage + migration
 
-### v0.3 — Helpers avancés
+### v0.3 — Helpers avancés ✅
 - `exclusive()` — = exhaustMap NgRx
 - `queued()` — = concatMap NgRx
 - `on()` — réactions inter-stores
@@ -381,11 +392,13 @@ computed: {
 - `distinctUntilChanged()` — éviter les exécutions inutiles
 - `combineLatest()` / `combineLatestStream()` — state deps + streams externes (RxJS optionnel)
 - Unification `init()` multi-framework (core/Angular/React/Vue)
-- Testing utilities
-- DevTools time-travel
+- `pipeStream()` + operators stream (`map/filter/switchMap/concatMap/exhaustMap/mergeMap/distinct/debounce/throttle/catchError/retry`)
+- `createEntityAdapter()` + `withEntities()` pour apps CRUD complexes
+- Testing utilities (partiellement livré, à compléter)
+- DevTools time-travel (à venir)
 
 ### v1.0 — Production ready
-- `withEntities()`, Schematics CLI, ESLint plugin
+- Schematics CLI, ESLint plugin
 - Documentation VitePress complète
 - Benchmarks comparatifs
 
