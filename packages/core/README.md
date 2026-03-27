@@ -81,6 +81,7 @@ unsubscribe()
 | `distinctUntilChanged()` | Ignore les appels si l’entrée ne change pas |
 | `forkJoin()` | Lance des tâches en parallèle, attend tout |
 | `race()` | Retourne la première tâche terminée |
+| `createEntityAdapter()` | Collections normalisées (ids/entities) + CRUD/selectors |
 | `combineLatest()` | Compose plusieurs deps pour `effects` |
 | `combineLatestStream()` | Combine plusieurs flux externes (compatible RxJS) |
 | `pipeStream()` + operators | Composable streams (`map`, `filter`, `distinctUntilChanged`, `debounce`, `throttle`, `switchMap`, `concatMap`, `exhaustMap`, `mergeMap`, `catchError`, `retry`) |

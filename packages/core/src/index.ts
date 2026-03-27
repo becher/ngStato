@@ -24,6 +24,7 @@ export { forkJoin }                             from './helpers/fork-join'
 export { race }                                 from './helpers/race'
 export { combineLatest }                        from './helpers/combine-latest'
 export { combineLatestStream }                  from './helpers/combine-latest-stream'
+export { createEntityAdapter }                  from './helpers/entity-adapter'
 export {
   pipeStream,
   mapStream,
@@ -39,6 +40,7 @@ export {
   retryStream
 }                                               from './helpers/stream-operators'
 export { withPersist }                          from './helpers/with-persist'
+export type { EntityId, EntityState, Update, EntityAdapterOptions } from './helpers/entity-adapter'
 
 // Types
 export type {
