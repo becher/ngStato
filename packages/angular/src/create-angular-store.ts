@@ -56,12 +56,43 @@ export function createAngularStore<S extends object>(
   }
 
   // 6. Exposer chaque computed comme Signal computed
-  const { computed: computedConfig } = config as StatoStoreConfig<S>
+  // On force la lecture des signals Angular pour que le computed()
+  // soit réactif via le système de change detection d'Angular.
+  const { computed: computedConfig, selectors: selectorsConfig } = config as StatoStoreConfig<S>
   if (computedConfig) {
     for (const key of Object.keys(computedConfig)) {
-      const computedSignal = computed(() => coreStore[key])
+      const fn = (computedConfig as any)[key]
+      if (typeof fn !== 'function') continue
+      const computedSignal = computed(() => {
+        // Lire les signals Angular pour déclencher le tracking
+        const snapshot: any = {}
+        for (const stateKey of Object.keys(signals)) {
+          snapshot[stateKey] = signals[stateKey]()
+        }
+        return fn(snapshot)
+      })
       Object.defineProperty(angularStore, key, {
         get:          () => computedSignal,
+        enumerable:   true,
+        configurable: true
+      })
+    }
+  }
+
+  // 6b. Exposer chaque selector memoïzé comme Signal computed
+  if (selectorsConfig) {
+    for (const key of Object.keys(selectorsConfig)) {
+      const fn = (selectorsConfig as any)[key]
+      if (typeof fn !== 'function') continue
+      const selectorSignal = computed(() => {
+        const snapshot: any = {}
+        for (const stateKey of Object.keys(signals)) {
+          snapshot[stateKey] = signals[stateKey]()
+        }
+        return fn(snapshot)
+      })
+      Object.defineProperty(angularStore, key, {
+        get:          () => selectorSignal,
         enumerable:   true,
         configurable: true
       })
@@ -77,9 +108,11 @@ export function createAngularStore<S extends object>(
     }
   }
 
-  // 8. Unifier le lifecycle avec @ngstato/core
-  // (init est idempotent: onInit ne sera appelé qu'une fois)
-  coreStore.__store__.init(angularStore)
+  // 8. Mettre à jour la référence du publicStore vers l'angularStore
+  // Note: createStore() a déjà appelé init() — on ne le rappelle PAS
+  // pour éviter un double _runEffects(). On met seulement à jour la
+  // référence pour que les effects/hooks utilisent l'angularStore (Signals).
+  coreStore.__store__.setPublicStore(angularStore)
 
   // 9. Exposer destroy pour le cleanup
   angularStore.__destroy__ = () => {

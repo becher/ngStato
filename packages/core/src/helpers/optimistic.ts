@@ -10,8 +10,10 @@ export function optimistic<S, A extends unknown[]>(
   confirm:   (state: S, ...args: A) => Promise<void>
 ) {
   return async (state: S, ...args: A): Promise<void> => {
-    // 1. Snapshot du state AVANT la modification
-    const snapshot = { ...(state as object) } as S
+    // 1. Snapshot PROFOND du state AVANT la modification
+    // structuredClone garantit un rollback correct même avec
+    // des arrays/objets imbriqués (ex: state.users[0].name)
+    const snapshot = structuredClone(state) as S
 
     // 2. Appliquer la modification immédiatement
     immediate(state, ...args)

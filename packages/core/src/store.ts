@@ -212,67 +212,73 @@ class StatoStore<S extends object> {
   }
 
   // ── Exécuter une action ────────────────────────────
-async dispatch(actionName: string, ...args: unknown[]) {
-  const action = this._actions[actionName]
-  if (!action) {
-    throw new Error(`[Stato] Action "${actionName}" introuvable`)
+  async dispatch(actionName: string, ...args: unknown[]) {
+    const action = this._actions[actionName]
+    if (!action) {
+      throw new Error(`[Stato] Action "${actionName}" introuvable`)
+    }
+
+    const publicAction = this._publicActions[actionName]
+
+    // Hook onAction — avant l'exécution
+    this._hooks.onAction?.(actionName, args)
+
+    const start = Date.now()
+    const prevState = { ...this._state }
+
+    const stateProxy = new Proxy({ ...this._state } as any, {
+      set: (target, key, value) => {
+        target[key] = value
+        this._setState({ [key]: value } as any)
+        return true
+      }
+    })
+
+    try {
+      await action(stateProxy, ...args)
+
+      // Hook onActionDone — après l'exécution
+      const duration = Date.now() - start
+      this._hooks.onActionDone?.(actionName, duration)
+
+      // Hook onStateChange — seulement si le state a réellement changé
+      const nextState = { ...this._state }
+      const hasChanged = Object.keys(nextState).some(
+        (k) => !Object.is((prevState as any)[k], (nextState as any)[k])
+      )
+      if (hasChanged) {
+        this._hooks.onStateChange?.(prevState as any, nextState as any)
+      }
+
+      if (publicAction) {
+        emitActionEvent({
+          action: publicAction,
+          name: actionName,
+          args,
+          store: this._publicStore,
+          status: 'success',
+          duration
+        })
+      }
+
+    } catch (error) {
+      // Hook onError — si une erreur est lancée
+      this._hooks.onError?.(error as Error, actionName)
+
+      if (publicAction) {
+        emitActionEvent({
+          action: publicAction,
+          name: actionName,
+          args,
+          store: this._publicStore,
+          status: 'error',
+          duration: Date.now() - start,
+          error: error as Error
+        })
+      }
+      throw error   // on remonte l'erreur quand même
+    }
   }
-
-  const publicAction = this._publicActions[actionName]
-
-  // Hook onAction — avant l'exécution
-  this._hooks.onAction?.(actionName, args)
-
-  const start = Date.now()
-  const prevState = { ...this._state }
-
-  const stateProxy = new Proxy({ ...this._state } as any, {
-    set: (target, key, value) => {
-      target[key] = value
-      this._setState({ [key]: value } as any)
-      return true
-    }
-  })
-
-  try {
-    await action(stateProxy, ...args)
-
-    // Hook onActionDone — après l'exécution
-    const duration = Date.now() - start
-    this._hooks.onActionDone?.(actionName, duration)
-
-    // Hook onStateChange — si le state a changé
-    this._hooks.onStateChange?.(prevState as any, { ...this._state } as any)
-
-    if (publicAction) {
-      emitActionEvent({
-        action: publicAction,
-        name: actionName,
-        args,
-        store: this._publicStore,
-        status: 'success',
-        duration
-      })
-    }
-
-  } catch (error) {
-    // Hook onError — si une erreur est lancée
-    this._hooks.onError?.(error as Error, actionName)
-
-    if (publicAction) {
-      emitActionEvent({
-        action: publicAction,
-        name: actionName,
-        args,
-        store: this._publicStore,
-        status: 'error',
-        duration: Date.now() - start,
-        error: error as Error
-      })
-    }
-    throw error   // on remonte l'erreur quand même
-  }
-}
 
   // ── Lire une valeur computed ───────────────────────
   getComputed(name: string): unknown {

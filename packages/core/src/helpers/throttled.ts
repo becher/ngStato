@@ -10,10 +10,17 @@ export function throttled<S, A extends unknown[]>(
 ) {
   let lastCall = 0
   let timer:    ReturnType<typeof setTimeout> | null = null
+  // Stocker le dernier appel pour utiliser le state le plus récent
+  let latestState: S
+  let latestArgs: A
 
   return async (state: S, ...args: A): Promise<void> => {
     const now = Date.now()
     const remaining = ms - (now - lastCall)
+
+    // Sauvegarder le state et args les plus récents
+    latestState = state
+    latestArgs = args
 
     if (remaining <= 0) {
       // Assez de temps passé — on exécute immédiatement
@@ -22,7 +29,7 @@ export function throttled<S, A extends unknown[]>(
         clearTimeout(timer)
         timer = null
       }
-      await fn(state, ...args)
+      await fn(latestState, ...latestArgs)
     } else {
       // Trop tôt — on planifie pour la fin du délai
       if (timer) clearTimeout(timer)
@@ -31,7 +38,7 @@ export function throttled<S, A extends unknown[]>(
           lastCall = Date.now()
           timer    = null
           try {
-            await fn(state, ...args)
+            await fn(latestState, ...latestArgs)
             resolve()
           } catch (error) {
             reject(error)
