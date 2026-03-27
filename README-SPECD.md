@@ -96,7 +96,8 @@ Raison:
 - `distinctUntilChanged()` (wrapper d'action, anti-execution inutile),
 - `forkJoin()` (parallel all),
 - `race()` (first wins),
-- `combineLatest()` (deps state/effects, sans streams).
+- `combineLatest()` (deps state/effects, sans streams),
+- `createEntityAdapter()` (collections normalisees ids/entities + CRUD + selectors).
 
 ### Fichiers
 
@@ -104,8 +105,10 @@ Raison:
 - `packages/core/src/helpers/fork-join.ts`
 - `packages/core/src/helpers/race.ts`
 - `packages/core/src/helpers/combine-latest.ts`
+- `packages/core/src/helpers/entity-adapter.ts`
 - `packages/core/src/index.ts`
 - `packages/core/src/__tests__/helpers.test.ts`
+- `packages/core/src/__tests__/entity-adapter.test.ts`
 - `packages/core/README.md`
 
 ---
@@ -119,10 +122,15 @@ Raison:
   - `pipeStream`,
   - `mapStream`,
   - `filterStream`,
+  - `distinctUntilChangedStream`,
+  - `debounceStream`,
+  - `throttleStream`,
   - `switchMapStream`,
   - `concatMapStream`,
   - `exhaustMapStream`,
-  - `mergeMapStream`.
+  - `mergeMapStream`,
+  - `catchErrorStream`,
+  - `retryStream`.
 
 ### Fichiers
 
@@ -196,7 +204,7 @@ Passage demos vers Vitest:
 
 ### Verification executee
 
-- `packages/core`: tests OK (105 tests apres ajouts stream operators)
+- `packages/core`: tests OK (115 tests apres stream operators + entity adapter)
 - `packages/angular`: tests OK
 - build monorepo OK (warnings styles/export conditions, non bloquants)
 
@@ -213,13 +221,7 @@ Passage demos vers Vitest:
 
 ## 4.2 Ce qui reste pour "niveau entreprise"
 
-- `withEntities()` (priorite haute) pour collections massives/normalisees.
-- stream operators complementaires:
-  - `distinctUntilChangedStream`,
-  - `debounceStream`,
-  - `throttleStream`,
-  - `catchErrorStream`,
-  - `retryStream`.
+- `withEntities()` en wrapper de config (au-dessus de `createEntityAdapter`) pour ergonomie store-level.
 - testing utilities dediees (`@ngstato/core/testing` / `@ngstato/angular/testing`).
 - devtools avances (time-travel, filtres).
 
@@ -227,25 +229,37 @@ Passage demos vers Vitest:
 
 ## 5) Strategie recommandee (ordre d'execution)
 
-## Phase A (prioritaire): Entities
+## Phase A (livre): Entity Adapter
 
 Objectif:
 
 - couvrir le coeur "app complexe CRUD" (equivalent avantage NgRx Entity).
 
-Sortie attendue:
+Sortie livree:
 
-- `withEntities()` + helpers CRUD normalises + selectors memoises.
+- `createEntityAdapter()` + helpers CRUD normalises + selectors.
 
-## Phase B: Stream toolkit complet 80/20
+## Phase B (livre): Stream toolkit 80/20
 
 Objectif:
 
 - couvrir les patterns RxJS reelles les plus utilises, sans reproduire tout RxJS.
 
+Sortie livree:
+
+- `pipeStream` + operators essentiels avec tests de semantique stricte.
+
+## Phase C (prochaine): withEntities + testing + devtools avances
+
+Objectif:
+
+- finaliser l'ergonomie enterprise sans perdre la simplicite.
+
 Sortie attendue:
 
-- operators essentiels manquants avec tests de semantique stricte.
+- `withEntities()` config-wrapper,
+- testing utilities dediees,
+- devtools time-travel / filtres.
 
 ## Phase C: Benchmark final (a la fin comme decide)
 
