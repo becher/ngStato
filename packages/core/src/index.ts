@@ -19,6 +19,10 @@ export { fromStream }                           from './helpers/from-stream'
 export { optimistic }                           from './helpers/optimistic'
 export { exclusive }                           from './helpers/exclusive'
 export { queued }                               from './helpers/queued'
+export { distinctUntilChanged }                 from './helpers/distinct-until-changed'
+export { forkJoin }                             from './helpers/fork-join'
+export { race }                                 from './helpers/race'
+export { combineLatest }                        from './helpers/combine-latest'
 export { withPersist }                          from './helpers/with-persist'
 
 // Types

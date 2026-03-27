@@ -12,6 +12,10 @@ import { optimistic } from '../helpers/optimistic'
 import { withPersist } from '../helpers/with-persist'
 import { exclusive } from '../helpers/exclusive'
 import { queued }    from '../helpers/queued'
+import { distinctUntilChanged } from '../helpers/distinct-until-changed'
+import { combineLatest } from '../helpers/combine-latest'
+import { forkJoin } from '../helpers/fork-join'
+import { race } from '../helpers/race'
 import { createStore } from '../store'
 
 // ─────────────────────────────────────────────────────
@@ -769,5 +773,82 @@ describe('queued()', () => {
 
     expect(fn).toHaveBeenCalledTimes(1)
     expect(state.value).toBe('')
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — distinctUntilChanged()
+// ─────────────────────────────────────────────────────
+
+describe('distinctUntilChanged()', () => {
+  it('ignore les appels quand la clé ne change pas', async () => {
+    const fn = vi.fn(async (state: any, q: string) => {
+      state.q = q
+    })
+
+    const action = distinctUntilChanged(
+      fn,
+      (q: string) => q.trim().toLowerCase()
+    )
+
+    const state: any = { q: '' }
+    await action(state, ' Alice ')
+    await action(state, 'alice')
+    await action(state, 'ALICE   ')
+    await action(state, 'bob')
+
+    expect(fn).toHaveBeenCalledTimes(2)
+    expect(state.q).toBe('bob')
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — combineLatest()
+// ─────────────────────────────────────────────────────
+
+describe('combineLatest()', () => {
+  it('compose plusieurs deps dans un tuple', () => {
+    const deps = combineLatest<any>()(
+      (s) => s.a,
+      (s) => s.b,
+      (s) => s.a + s.b
+    )
+
+    expect(deps({ a: 1, b: 2 })).toEqual([1, 2, 3])
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// TESTS — forkJoin() / race()
+// ─────────────────────────────────────────────────────
+
+describe('forkJoin()', () => {
+  it('attend toutes les tâches et retourne un objet', async () => {
+    const result = await forkJoin({
+      a: async () => {
+        await new Promise(r => setTimeout(r, 10))
+        return 1
+      },
+      b: () => 'ok'
+    })
+
+    expect(result).toEqual({ a: 1, b: 'ok' })
+  })
+})
+
+describe('race()', () => {
+  it('retourne la première tâche qui se termine', async () => {
+    const result = await race<number>([
+      async () => {
+        await new Promise(r => setTimeout(r, 30))
+        return 2
+      },
+      async () => {
+        await new Promise(r => setTimeout(r, 10))
+        return 1
+      }
+    ])
+
+    expect(result).toBe(1)
   })
 })

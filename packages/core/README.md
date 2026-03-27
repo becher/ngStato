@@ -78,6 +78,10 @@ unsubscribe()
 | `exclusive()` | Ignore les nouveaux appels pendant qu'une exécution est en cours |
 | `retryable()` | Retry avec backoff fixe ou exponentiel |
 | `queued()` | Met en file et exécute les appels dans l'ordre d'arrivée |
+| `distinctUntilChanged()` | Ignore les appels si l’entrée ne change pas |
+| `forkJoin()` | Lance des tâches en parallèle, attend tout |
+| `race()` | Retourne la première tâche terminée |
+| `combineLatest()` | Compose plusieurs deps pour `effects` |
 | `fromStream()` | Realtime — WebSocket, Firebase, Supabase |
 | `optimistic()` | Optimistic update + rollback automatique |
 | `withPersist()` | Persistance localStorage/sessionStorage + migration |
