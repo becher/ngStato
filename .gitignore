@@ -21,6 +21,7 @@ out-tsc/
 *.ntvs*
 *.njsproj
 *.sln
+.specstory/
 
 # OS
 .DS_Store
