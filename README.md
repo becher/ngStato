@@ -155,18 +155,30 @@ export class UserListComponent {
 | `abortable()` | Annule la requête précédente automatiquement | switchMap |
 | `debounced()` | Debounce sans RxJS — défaut 300ms | debounceTime |
 | `throttled()` | Throttle sans RxJS | throttleTime |
+| `exclusive()` | Ignore les nouveaux appels pendant qu'une exécution est en cours | exhaustMap |
 | `retryable()` | Retry avec backoff fixe ou exponentiel | retryWhen |
+| `queued()` | Met en file et exécute les appels dans l'ordre d'arrivée | concatMap |
 | `fromStream()` | Écoute Observable/WebSocket/Firebase/Supabase | rxMethod + Effect |
 | `optimistic()` | Update immédiat + rollback automatique si échec | Manuel en NgRx |
 | `withPersist()` | Persistance state (localStorage/sessionStorage) + migration | Meta-reducers custom |
 
 ```ts
-import { abortable, debounced, throttled, retryable, fromStream, optimistic } from '@ngstato/core'
+import { abortable, debounced, throttled, exclusive, retryable, queued, fromStream, optimistic } from '@ngstato/core'
 
 actions: {
   // Annulation auto — comme switchMap
   search: abortable(async (state, q: string, { signal }) => {
     state.results = await fetch(`/api/search?q=${q}`, { signal }).then(r => r.json())
+  }),
+
+  // exclusive — ignore les nouveaux appels pendant la requête en cours
+  searchExclusive: exclusive(async (state, q: string) => {
+    state.results   = await fetch(`/api/search?q=${q}`).then(r => r.json())
+  }),
+
+  // queued — met en file et exécute dans l'ordre d'arrivée
+  searchQueued: queued(async (state, q: string) => {
+    state.results   = await fetch(`/api/search?q=${q}`).then(r => r.json())
   }),
 
   // Debounce 300ms
@@ -364,7 +376,7 @@ computed: {
 ### v0.3 — Helpers avancés
 - `exclusive()` — = exhaustMap NgRx
 - `queued()` — = concatMap NgRx
-- `store.on()` — réactions inter-stores
+- `on()` — réactions inter-stores
 - Testing utilities
 - DevTools time-travel
 
