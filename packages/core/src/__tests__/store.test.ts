@@ -453,13 +453,24 @@ describe('createStore — cas avancés', () => {
     expect(store.count).toBe(0)
   })
 
-  it('onInit hook appelé à l initialisation', () => {
+  it('onInit hook appelé automatiquement à la création', () => {
     const onInit = vi.fn()
-    const store  = createStore({
+    createStore({
       count: 0,
       hooks: { onInit }
     })
 
+    expect(onInit).toHaveBeenCalledTimes(1)
+  })
+
+  it('init est idempotent — onInit ne se relance pas', () => {
+    const onInit = vi.fn()
+    const store = createStore({
+      count: 0,
+      hooks: { onInit }
+    })
+
+    store.__store__.init(store)
     store.__store__.init(store)
     expect(onInit).toHaveBeenCalledTimes(1)
   })
