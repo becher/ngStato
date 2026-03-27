@@ -377,6 +377,10 @@ computed: {
 - `exclusive()` — = exhaustMap NgRx
 - `queued()` — = concatMap NgRx
 - `on()` — réactions inter-stores
+- `forkJoin()` / `race()` — patterns async (Promise-first)
+- `distinctUntilChanged()` — éviter les exécutions inutiles
+- `combineLatest()` / `combineLatestStream()` — state deps + streams externes (RxJS optionnel)
+- Unification `init()` multi-framework (core/Angular/React/Vue)
 - Testing utilities
 - DevTools time-travel
 
