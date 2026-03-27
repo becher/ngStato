@@ -36,5 +36,24 @@
     "typescript":            "~5.5.0",
     "tsup":                  "^8.0.0",
     "vitest":                "^1.6.0"
-  }
+   },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/becher/ngStato.git",
+    "directory": "packages/angular"
+  },
+  "homepage": "https://github.com/becher/ngStato#readme",
+  "bugs": {
+    "url": "https://github.com/becher/ngStato/issues"
+  },
+  "author": "becher",
+  "keywords": [
+    "angular",
+    "state-management",
+    "signals",
+    "store",
+    "ngrx-alternative",
+    "ngstato"
+  ]
 }

@@ -22,5 +22,24 @@
     "tsup": "^8.0.0",
     "vitest": "^1.6.0",
     "typescript": "^5.4.0"
-  }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/becher/ngStato.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/becher/ngStato#readme",
+  "bugs": {
+    "url": "https://github.com/becher/ngStato/issues"
+  },
+  "author": "becher",
+  "keywords": [
+    "state-management",
+    "store",
+    "signals",
+    "framework-agnostic",
+    "rxjs-alternative",
+    "ngstato"
+  ]
 }
