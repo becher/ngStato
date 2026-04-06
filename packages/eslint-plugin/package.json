@@ -1,0 +1,39 @@
+{
+  "name": "@ngstato/eslint-plugin",
+  "version": "0.4.0",
+  "private": false,
+  "description": "ESLint rules for ngStato — catch common mistakes, enforce best practices",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs --dts"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "~5.5.0",
+    "@typescript-eslint/utils": "^7.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/becher/ngStato.git",
+    "directory": "packages/eslint-plugin"
+  },
+  "homepage": "https://github.com/becher/ngStato#readme",
+  "author": "becher",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "ngstato",
+    "ngrx",
+    "state-management",
+    "angular"
+  ]
+}
