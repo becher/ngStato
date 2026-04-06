@@ -21,8 +21,10 @@ import type { StatoStoreConfig } from '@ngstato/core'
 export function createAngularStore<S extends object>(
   config: S & StatoStoreConfig<S>
 ) {
-  // 1. Créer le store core
-  const coreStore = createStore(config)
+  // 1. Créer le store core — SANS l'initialiser
+  // L'init sera fait après que l'angularStore soit prêt,
+  // pour que les effects reçoivent la bonne référence dès le 1er run.
+  const coreStore = createStore(config, { skipInit: true })
 
   // 2. Créer un Signal pour chaque propriété du state
   const signals: Record<string, ReturnType<typeof signal>> = {}
@@ -108,16 +110,16 @@ export function createAngularStore<S extends object>(
     }
   }
 
-  // 8. Mettre à jour la référence du publicStore vers l'angularStore
-  // Note: createStore() a déjà appelé init() — on ne le rappelle PAS
-  // pour éviter un double _runEffects(). On met seulement à jour la
-  // référence pour que les effects/hooks utilisent l'angularStore (Signals).
-  coreStore.__store__.setPublicStore(angularStore)
-
-  // 9. Exposer destroy pour le cleanup
+  // 8. Exposer destroy pour le cleanup
   angularStore.__destroy__ = () => {
     coreStore.__store__.destroy(angularStore)
   }
+
+  // 9. Initialiser le store UNE SEULE FOIS avec l'angularStore
+  // C'est ici que onInit() est appelé et que les effects démarrent,
+  // directement avec la bonne référence (angularStore avec Signals).
+  // Aucun double _runEffects — un seul init, un seul run.
+  coreStore.__store__.init(angularStore)
 
   return angularStore
 }

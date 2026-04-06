@@ -1,394 +1,161 @@
-# ngStato
+<div align="center">
 
-> Stato est une librairie de gestion d'état Angular moderne pour remplacer NgRx complètement, avec une API plus simple, Signals-first, sans RxJS obligatoire.
+# @ngstato/angular
 
-![version](https://img.shields.io/badge/version-0.2.0-blue)
-![tests](https://img.shields.io/badge/tests-144%20%E2%9C%85-green)
-![bundle](https://img.shields.io/badge/bundle-~3KB-yellow)
-![angular](https://img.shields.io/badge/Angular-17%2B-red)
-![license](https://img.shields.io/badge/license-MIT-lightgrey)
+### NgRx requires 9 concepts for an async action. ngStato requires 1.
 
----
+**Angular Signals. Dependency injection. Built-in DevTools. ~1 KB.**
 
-## La même action. Deux approches.
+[![npm](https://img.shields.io/badge/npm-v0.3.1-blue)](https://www.npmjs.com/package/@ngstato/angular)
+[![Angular](https://img.shields.io/badge/Angular-17%2B-dd0031)](https://angular.dev)
+[![gzip](https://img.shields.io/badge/gzip-~1KB-brightgreen)](#)
+[![license](https://img.shields.io/badge/license-MIT-lightgrey)](#)
 
-| ❌ NgRx v20 (officiel, MIT) | ✅ ngStato |
-|---|---|
-| `loadStudents: rxMethod<void>(` | `async loadStudents(state) {` |
-| `  pipe(` | `  state.isLoading = true` |
-| `    tap(() => patchState(store, { isLoading: true })),` | `  state.students = await service.getAll()` |
-| `    switchMap(() =>` | `  state.isLoading = false` |
-| `      from(service.getAll()).pipe(` | `}` |
-| `        tapResponse({` | |
-| `          next: (s) => patchState(store, { students: s, isLoading: false }),` | **1 concept : async/await** |
-| `          error: (e) => patchState(store, { error: e.message, isLoading: false })` | **5 lignes** |
-| `        })` | |
-| `      )` | |
-| `    )` | |
-| `  )` | |
-| `)` | |
-| **9 concepts RxJS/NgRx — 14 lignes** | |
+[Documentation](https://becher.github.io/ngStato/) · [Angular Guide](https://becher.github.io/ngStato/guide/angular) · [API Reference](https://becher.github.io/ngStato/api/core)
+
+</div>
 
 ---
 
-## Pourquoi switcher vers ngStato ?
-
-**1 concept au lieu de 9 pour écrire une action async**
-NgRx nécessite rxMethod, pipe, tap, switchMap, from, tapResponse, patchState... ngStato nécessite uniquement async/await — natif JavaScript.
-
-**2x moins de code pour le même résultat**
-Sur un store CRUD complet (5 actions), NgRx v20 nécessite ~90 lignes. ngStato nécessite ~45 lignes.
-
-**DevTools sans extension browser**
-NgRx DevTools nécessite l'extension Chrome Redux DevTools. ngStato intègre ses DevTools directement dans l'app — fonctionnels sur tous les browsers et mobile.
-
-**Protection production automatique**
-ngStato utilise `isDevMode()` d'Angular — les DevTools sont physiquement impossibles à activer en prod.
-
-**38x plus léger — ~3 KB vs ~50 KB gzip**
-
----
-
-## Installation
+## Install
 
 ```bash
 npm install @ngstato/core @ngstato/angular
 ```
 
+## Full working example — 3 files
+
+**1. Config** — one-time setup:
+
 ```ts
 // app.config.ts
-import { provideStato } from '@ngstato/angular'
-import { isDevMode }    from '@angular/core'
-
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideRouter(routes),
-    provideStato({
-      http:     { baseUrl: 'https://api.monapp.com', timeout: 8000 },
-      devtools: isDevMode()
-    })
-  ]
-}
+provideStato({
+  http: { baseUrl: 'https://api.example.com' },
+  devtools: isDevMode()
+})
 ```
 
----
-
-## Créer un store
+**2. Store** — state + actions + selectors in one object:
 
 ```ts
-// user.store.ts
-import { createStore, http, optimistic, retryable, connectDevTools } from '@ngstato/core'
-import { StatoStore, injectStore } from '@ngstato/angular'
+// users.store.ts
+import { createStore, http, connectDevTools }  from '@ngstato/core'
+import { StatoStore }                          from '@ngstato/angular'
 
-function createUserStore() {
+export const UsersStore = StatoStore(() => {
   const store = createStore({
+    users:   [] as User[],
+    loading: false,
+    error:   null as string | null,
 
-    // State
-    users:     [] as User[],
-    isLoading: false,
-    error:     null as string | null,
-
-    // Computed — recalculés automatiquement
-    computed: {
-      total:  (state) => state.users.length,
-      admins: (state) => state.users.filter(u => u.role === 'admin')
+    selectors: {
+      total:  (s) => s.users.length,
+      admins: (s) => s.users.filter(u => u.role === 'admin')
     },
 
-    // Actions
     actions: {
+      async loadUsers(state) {
+        state.loading = true
+        state.users   = await http.get('/users')
+        state.loading = false
+      },
 
-      // Chargement avec retry automatique
-      loadUsers: retryable(
-        async (state) => {
-          state.isLoading = true
-          state.users     = await http.get('/users')
-          state.isLoading = false
-        },
-        { attempts: 3, backoff: 'exponential', delay: 1000 }
-      ),
-
-      // Suppression avec rollback automatique
-      deleteUser: optimistic(
-        (state, id: string) => {
-          state.users = state.users.filter(u => u.id !== id)
-        },
-        async (_, id: string) => {
-          await http.delete(`/users/${id}`)
-        }
-      ),
-
-      // Action simple
-      async addUser(state, user: UserCreate) {
-        const created  = await http.post('/users', user)
-        state.users    = [...state.users, created]
+      async deleteUser(state, id: string) {
+        await http.delete(`/users/${id}`)
+        state.users = state.users.filter(u => u.id !== id)
       }
     },
 
-    // Hooks lifecycle
-    hooks: {
-      onError: (err, name) => console.error(`[UserStore] ${name}:`, err.message)
-    }
+    hooks: { onInit: (s) => s.loadUsers() }
   })
 
-  connectDevTools(store, 'UserStore')  // ← une seule ligne
+  connectDevTools(store, 'Users')
   return store
-}
-
-// Injection auto + API classe sans boilerplate
-export const UserStore = StatoStore(() => {
-  return createUserStore()
 })
-
-// Dans un composant
-@Component({ ... })
-export class UserListComponent {
-  store = injectStore(UserStore)  // ou inject(UserStore)
-}
 ```
 
----
-
-## Helpers
-
-| Helper | Description | Équivalent NgRx |
-|--------|-------------|-----------------|
-| `abortable()` | Annule la requête précédente automatiquement | switchMap |
-| `debounced()` | Debounce sans RxJS — défaut 300ms | debounceTime |
-| `throttled()` | Throttle sans RxJS | throttleTime |
-| `retryable()` | Retry avec backoff fixe ou exponentiel | retryWhen |
-| `fromStream()` | Écoute Observable/WebSocket/Firebase/Supabase | rxMethod + Effect |
-| `optimistic()` | Update immédiat + rollback automatique si échec | Manuel en NgRx |
-| `withPersist()` | Persistance state (localStorage/sessionStorage) + migration | Meta-reducers custom |
+**3. Component** — everything is a Signal:
 
 ```ts
-import { abortable, debounced, throttled, retryable, fromStream, optimistic } from '@ngstato/core'
-
-actions: {
-  // Annulation auto — comme switchMap
-  search: abortable(async (state, q: string, { signal }) => {
-    state.results = await fetch(`/api/search?q=${q}`, { signal }).then(r => r.json())
-  }),
-
-  // Debounce 300ms
-  filter: debounced((state, q: string) => { state.query = q }, 300),
-
-  // Retry x3 avec backoff exponentiel
-  load: retryable(async (state) => {
-    state.data = await http.get('/data')
-  }, { attempts: 3, backoff: 'exponential' }),
-
-  // Realtime WebSocket
-  listen: fromStream(
-    () => webSocket('wss://api.monapp.com/ws'),
-    (state, msg) => { state.messages = [...state.messages, msg] }
-  ),
-
-  // Optimistic + rollback auto
-  delete: optimistic(
-    (state, id) => { state.items = state.items.filter(i => i.id !== id) },
-    async (_, id) => { await http.delete(`/items/${id}`) }
-  )
-}
-```
-
----
-
-## Nouveautés v0.2
-
-- `selectors` memoïzés avec recalcul ciblé
-- `effects` réactifs explicites avec cleanup
-- `withPersist()` pour hydrate/persist avec versioning
-
----
-
-## Client HTTP
-
-```ts
-import { http } from '@ngstato/core'
-
-// Configurer via provideStato() — une seule fois
-provideStato({
-  http: {
-    baseUrl: 'https://api.monapp.com',
-    timeout: 8000,
-    headers: { 'X-App-Version': '1.0' },
-    auth:    () => localStorage.getItem('token')
-  }
-})
-
-// Utiliser partout dans les actions
-await http.get('/users')
-await http.get('/users', { params: { page: 1, limit: 10 } })
-await http.post('/users', { name: 'Alice' })
-await http.put('/users/1', { name: 'Bob' })
-await http.patch('/users/1', { active: false })
-await http.delete('/users/1')
-```
-
----
-
-## DevTools
-
-Panel intégré dans l'app — sans extension browser, sans installation supplémentaire.
-
-- Panel déplaçable à la souris
-- Redimensionnable — coin bas-droite
-- Minimisable — bouton ▼/▲
-- Historique des actions avec durées et timestamps
-- Diff Avant/Après pour chaque action
-- Onglet State — state actuel complet
-- **Désactivé automatiquement en production via `isDevMode()`**
-
-```ts
-// app.config.ts
-provideStato({ devtools: isDevMode() })
-
-// app.component.ts
-import { StatoDevToolsComponent } from '@ngstato/angular'
-
+// users.component.ts
 @Component({
-  imports:  [RouterOutlet, StatoDevToolsComponent],
-  template: `<router-outlet /><stato-devtools />`
+  template: `
+    @if (store.loading()) { <spinner /> }
+    
+    <h2>Users ({{ store.total() }})</h2>
+    
+    @for (user of store.users(); track user.id) {
+      <div>
+        {{ user.name }}
+        <button (click)="store.deleteUser(user.id)">×</button>
+      </div>
+    }
+  `
 })
-export class AppComponent {}
-
-// mon-store.ts
-connectDevTools(store, 'MonStore')  // une seule ligne
+export class UsersComponent {
+  store = injectStore(UsersStore)
+}
 ```
 
-| | NgRx DevTools | ngStato DevTools |
-|---|---|---|
-| Installation | Extension Chrome | Zéro installation |
-| Browser support | Chrome/Firefox | Tous browsers |
+**That's the entire pattern.** No reducers, no effects class, no action creators, no selectors file.
+
+---
+
+## What you get
+
+| What you define | What Angular gets |
+|:--|:--|
+| `users: []` (state) | `store.users()` → `WritableSignal` |
+| `total: (s) => s.users.length` (selector) | `store.total()` → `computed Signal` (memoized) |
+| `async loadUsers(state) { ... }` (action) | `store.loadUsers()` → `Promise<void>` |
+
+All Signals **update automatically**. Zero manual subscriptions.
+
+---
+
+## DevTools — zero install, all browsers
+
+```html
+<stato-devtools />
+```
+
+- Draggable, resizable, minimizable panel
+- Action history with timestamps and duration
+- State diffs — before/after for every action
+- Current state explorer
+- **Works on mobile**
+- **Impossible to enable in production** (`isDevMode()`)
+
+| | NgRx | ngStato |
+|:--|:--|:--|
+| Setup | Chrome extension | `<stato-devtools />` |
 | Mobile | ❌ | ✅ |
-| Désactivé en prod | Manuel | `isDevMode()` auto |
-| State visible en prod | Oui si oubli | Jamais |
+| Prod safety | Manual | **Automatic** |
 
 ---
 
-## Guide de migration NgRx → ngStato
+## Why teams switch
 
-La migration est progressive — store par store.
-
-```ts
-// withState → state initial
-// NgRx
-withState({ users: [] as User[], isLoading: false })
-// ngStato
-users: [] as User[], isLoading: false,
-
-// withMethods + rxMethod → actions
-// NgRx
-withMethods((store) => ({
-  load: rxMethod<void>(pipe(
-    tap(() => patchState(store, { isLoading: true })),
-    switchMap(() => from(service.get()).pipe(
-      tapResponse({
-        next:  (d) => patchState(store, { data: d, isLoading: false }),
-        error: (e) => patchState(store, { error: e.message })
-      })
-    ))
-  ))
-}))
-// ngStato
-actions: {
-  async load(state) {
-    state.isLoading = true
-    state.data      = await service.get()
-    state.isLoading = false
-  }
-}
-
-// withComputed → computed
-// NgRx
-withComputed((store) => ({
-  total: computed(() => store.users().length)
-}))
-// ngStato
-computed: {
-  total: (state) => state.users.length
-}
-```
+| | NgRx v21 | @ngstato |
+|:--|:--|:--|
+| **Bundle** | ~50 KB gzip | **~4 KB** (core + angular) |
+| **Async action** | `rxMethod` + `pipe` + `tap` + `switchMap` + `from` + `tapResponse` + `patchState` | **`async/await`** |
+| **CRUD store** | ~90 lines, 3+ files | **~45 lines, 1 file** |
+| **DevTools** | Chrome only | **All browsers + mobile** |
+| **Entity adapter** | ✅ | ✅ |
+| **Feature composition** | ✅ | ✅ `mergeFeatures()` |
+| **Concurrency** | RxJS operators | ✅ `exclusive` `queued` `abortable` |
+| **Testing** | `provideMockStore` | ✅ `createMockStore()` |
+| **Persistence** | Custom meta-reducers | ✅ `withPersist()` |
 
 ---
 
-## Comparaison NgRx SignalStore v20 vs ngStato
+## 📖 Documentation
 
-| Feature | NgRx SignalStore v20 | ngStato v0.1 |
-|---------|---------------------|--------------|
-| withState | ✅ | ✅ |
-| withMethods / actions | ✅ rxMethod requis | ✅ async/await |
-| withComputed | ✅ | ✅ |
-| patchState | ✅ obligatoire | ✅ state.x = y |
-| provideStore | ✅ | ✅ provideStato() |
-| inject() | ✅ | ✅ injectStore() |
-| onInit / onDestroy | ✅ | ✅ |
-| DevTools | ✅ extension Chrome | ✅ panel intégré |
-| DevTools mobile | ❌ | ✅ |
-| Protection prod | ⚠️ logOnly manuel | ✅ isDevMode() auto |
-| RxJS requis | ✅ obligatoire | ❌ optionnel |
-| Bundle size | ~50 KB gzip | ~3 KB gzip |
-| withProps | ✅ | 🔜 v0.2 |
-| withEntities | ✅ | 🔜 v1.0 |
-| signalStoreFeature() | ✅ | 🔜 v0.4 |
-| Schematics CLI | ✅ | 🔜 v1.0 |
-| ESLint plugin | ✅ | 🔜 v1.0 |
+**[becher.github.io/ngStato](https://becher.github.io/ngStato/)**
 
----
-
-## Demo live
-
-<a href="https://stackblitz.com/github/becher/ngstato-demo" target="_blank" rel="noopener">
-  <img src="https://developer.stackblitz.com/img/open_in_stackblitz.svg" alt="Open in StackBlitz">
-</a>
-
----
-
-## Roadmap
-
-### v0.1 ✅ TERMINÉ
-- `createStore()` — state, actions, computed, hooks
-- `StatoHttp` — GET POST PUT PATCH DELETE avec auth, timeout, params
-- `abortable()`, `debounced()`, `throttled()`, `retryable()`, `fromStream()`, `optimistic()`
-- `@ngstato/angular` — Signals natifs, `provideStato()`, `injectStore()`
-- DevTools — panel déplaçable, redimensionnable, minimisable
-- `connectDevTools()` — connexion automatique store → DevTools
-- Protection prod automatique via `isDevMode()`
-- **144 tests — 100% passing**
-
-### v0.2 — Selectors / Effects / Persist ✅
-- `selectors` memoïzés
-- `effects` réactifs avec cleanup
-- `withPersist()` — localStorage / sessionStorage + migration
-
-### v0.3 — Helpers avancés
-- `exclusive()` — = exhaustMap NgRx
-- `queued()` — = concatMap NgRx
-- `store.on()` — réactions inter-stores
-- Testing utilities
-- DevTools time-travel
-
-### v1.0 — Production ready
-- `withEntities()`, Schematics CLI, ESLint plugin
-- Documentation VitePress complète
-- Benchmarks comparatifs
-
----
-
-## Contribuer
-
-```bash
-git clone https://github.com/becher/ngstato
-cd ngstato
-pnpm install   # Node >= 18, pnpm >= 8
-pnpm build
-pnpm test      # 144 tests
-```
-
-Convention commits : `feat` / `fix` / `docs` / `test` / `refactor` / `chore`
-
----
+[Start in 5 min](https://becher.github.io/ngStato/guide/start-in-5-min) · [Angular guide](https://becher.github.io/ngStato/guide/angular) · [Testing](https://becher.github.io/ngStato/guide/testing) · [CRUD recipe](https://becher.github.io/ngStato/recipes/crud) · [NgRx migration](https://becher.github.io/ngStato/migration/ngrx-to-ngstato) · [API](https://becher.github.io/ngStato/api/core)
 
 ## License
 
-MIT — Copyright (c) 2025 ngStato
+MIT

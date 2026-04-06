@@ -2,18 +2,19 @@ import {
   Component,
   OnInit,
   OnDestroy,
-  signal
+  signal,
+  computed
 }                        from '@angular/core'
-import { devTools }      from '@ngstato/core'
-import type { ActionLog } from '@ngstato/core'
-import { JsonPipe } from '@angular/common'
+import { devTools }                           from '@ngstato/core'
+import type { ActionLog, DevToolsState }       from '@ngstato/core'
+import { JsonPipe, KeyValuePipe } from '@angular/common'
 
 @Component({
-  selector:   'ngstato-devtools',
+  selector:   'ngstato-devtools, stato-devtools',
   standalone: true,
-  imports:    [JsonPipe],
+  imports:    [JsonPipe, KeyValuePipe],
   template: `
-    <!-- Bouton flottant -->
+    <!-- Floating button -->
     @if (!isOpen()) {
       <button class="devtools-fab" (click)="toggle()">
         🛠 Stato
@@ -27,7 +28,7 @@ import { JsonPipe } from '@angular/common'
         [class.devtools-panel--minimized]="isMinimized()"
         [style.left.px]="posX()"
         [style.top.px]="posY()"
-        [style.width.px]="isMinimized() ? 200 : panelWidth()"
+        [style.width.px]="isMinimized() ? 220 : panelWidth()"
         [style.height]="isMinimized() ? 'auto' : panelHeight() + 'px'"
       >
 
@@ -36,19 +37,24 @@ import { JsonPipe } from '@angular/common'
           class="devtools-header"
           (mousedown)="onDragStart($event)"
         >
-          <span class="devtools-title">🛠 Stato</span>
+          <span class="devtools-title">
+            🛠 Stato
+            @if (isTimeTraveling()) {
+              <span class="tt-badge">TIME-TRAVEL</span>
+            }
+          </span>
           <div class="devtools-header-actions">
             @if (!isMinimized()) {
-              <button class="btn-icon" (click)="clear()" title="Vider">🗑</button>
+              <button class="btn-icon" (click)="clear()" title="Clear">🗑</button>
             }
-            <button class="btn-icon" (click)="toggleMinimize()" title="Minimiser/Agrandir">
+            <button class="btn-icon" (click)="toggleMinimize()" title="Minimize">
               {{ isMinimized() ? '▲' : '▼' }}
             </button>
-            <button class="btn-icon" (click)="toggle()" title="Fermer">✕</button>
+            <button class="btn-icon" (click)="toggle()" title="Close">✕</button>
           </div>
         </div>
 
-        <!-- Resize handle — coin bas droite -->
+        <!-- Resize handle -->
         @if (!isMinimized()) {
           <div
             class="devtools-resize"
@@ -76,17 +82,55 @@ import { JsonPipe } from '@angular/common'
             </button>
           </div>
 
-          <!-- Tab Actions -->
+          <!-- Time-travel toolbar -->
+          @if (activeTab() === 'actions' && logs().length) {
+            <div class="tt-toolbar">
+              <button
+                class="tt-btn"
+                (click)="onUndo()"
+                [disabled]="!canUndo()"
+                title="Undo (step back)"
+              >⏪</button>
+              <button
+                class="tt-btn"
+                (click)="onRedo()"
+                [disabled]="!canRedo()"
+                title="Redo (step forward)"
+              >⏩</button>
+              @if (isTimeTraveling()) {
+                <button
+                  class="tt-btn tt-btn--resume"
+                  (click)="onResume()"
+                  title="Resume live state"
+                >▶ Live</button>
+              }
+              <div class="tt-spacer"></div>
+              <button
+                class="tt-btn tt-btn--export"
+                (click)="onExport()"
+                title="Export state snapshot (JSON)"
+              >📤</button>
+              <button
+                class="tt-btn tt-btn--import"
+                (click)="onImport()"
+                title="Import state snapshot"
+              >📥</button>
+            </div>
+          }
+
+          <!-- Tab: Actions -->
           @if (activeTab() === 'actions') {
             <div class="devtools-content">
               @if (!logs().length) {
-                <div class="devtools-empty">Aucune action pour l'instant</div>
+                <div class="devtools-empty">No actions yet</div>
               }
               @for (log of logs(); track log.id) {
                 <div
                   class="log-item"
                   [class.log-item--error]="log.status === 'error'"
-                  (click)="selectLog(log)"
+                  [class.log-item--active]="activeLogId() === log.id"
+                  [class.log-item--future]="isFutureLog(log)"
+                  (click)="onTravelTo(log)"
                 >
                   <div class="log-item__left">
                     <span class="log-status">{{ log.status === 'success' ? '✓' : '✗' }}</span>
@@ -94,11 +138,16 @@ import { JsonPipe } from '@angular/common'
                   </div>
                   <div class="log-item__right">
                     @if (log.status === 'error') {
-                      <span class="log-error-badge">erreur</span>
+                      <span class="log-error-badge">error</span>
                     } @else {
                       <span class="log-duration">{{ log.duration }}ms</span>
                     }
                     <span class="log-time">{{ formatTime(log.at) }}</span>
+                    <button
+                      class="btn-icon btn-replay"
+                      (click)="onReplay(log, $event)"
+                      title="Replay this action"
+                    >🔄</button>
                   </div>
                 </div>
 
@@ -108,11 +157,11 @@ import { JsonPipe } from '@angular/common'
                       <div class="log-detail__error">{{ log.error }}</div>
                     }
                     <div class="log-detail__section">
-                      <span class="log-detail__label">Avant</span>
+                      <span class="log-detail__label">Before</span>
                       <pre>{{ log.prevState | json }}</pre>
                     </div>
                     <div class="log-detail__section">
-                      <span class="log-detail__label">Après</span>
+                      <span class="log-detail__label">After</span>
                       <pre>{{ log.nextState | json }}</pre>
                     </div>
                   </div>
@@ -121,13 +170,18 @@ import { JsonPipe } from '@angular/common'
             </div>
           }
 
-          <!-- Tab State -->
+          <!-- Tab: State -->
           @if (activeTab() === 'state') {
             <div class="devtools-content">
-              @if (logs().length) {
-                <pre class="state-view">{{ logs()[0].nextState | json }}</pre>
+              @if (globalState().size) {
+                @for (entry of globalState() | keyvalue; track entry.key) {
+                  <div class="state-store-block">
+                    <div class="state-store-name">{{ entry.key }}</div>
+                    <pre class="state-view">{{ entry.value | json }}</pre>
+                  </div>
+                }
               } @else {
-                <div class="devtools-empty">Aucun state disponible</div>
+                <div class="devtools-empty">No state available</div>
               }
             </div>
           }
@@ -135,8 +189,19 @@ import { JsonPipe } from '@angular/common'
 
       </div>
     }
+
+    <!-- Hidden file input for import -->
+    <input
+      #fileInput
+      type="file"
+      accept=".json"
+      style="display: none"
+      (change)="onFileSelected($event)"
+    />
   `,
   styles: [`
+    :host { font-family: system-ui, -apple-system, sans-serif; }
+
     .devtools-fab {
       position:      fixed;
       bottom:        1.5rem;
@@ -159,7 +224,7 @@ import { JsonPipe } from '@angular/common'
       position:       fixed;
       background:     #0f172a;
       border-radius:  12px;
-      box-shadow:     0 8px 32px rgba(0,0,0,0.4);
+      box-shadow:     0 8px 32px rgba(0,0,0,0.5);
       z-index:        9999;
       display:        flex;
       flex-direction: column;
@@ -167,6 +232,7 @@ import { JsonPipe } from '@angular/common'
       font-family:    'Courier New', monospace;
       min-width:      200px;
       min-height:     40px;
+      border:         1px solid #1e293b;
     }
 
     .devtools-panel--minimized {
@@ -190,6 +256,24 @@ import { JsonPipe } from '@angular/common'
       font-size:   0.82rem;
       font-weight: 600;
       font-family: system-ui;
+      display:     flex;
+      align-items: center;
+      gap:         0.4rem;
+    }
+
+    .tt-badge {
+      background:    #7c3aed;
+      color:         #fff;
+      font-size:     0.6rem;
+      padding:       0.12rem 0.4rem;
+      border-radius: 4px;
+      font-weight:   700;
+      letter-spacing: 0.05em;
+      animation:     tt-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes tt-pulse {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.6; }
     }
 
     .devtools-header-actions { display: flex; gap: 0.25rem; }
@@ -218,6 +302,7 @@ import { JsonPipe } from '@angular/common'
     }
     .devtools-resize:hover { color: #64748b; }
 
+    /* ── Tabs ─────────────────────────────────────────── */
     .devtools-tabs {
       display:       flex;
       background:    #1e293b;
@@ -231,10 +316,56 @@ import { JsonPipe } from '@angular/common'
       cursor:      pointer;
       font-size:   0.78rem;
       font-family: system-ui;
+      transition:  color 0.15s;
     }
     .tab:hover    { color: #e2e8f0; }
     .tab--active  { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
 
+    /* ── Time-travel toolbar ──────────────────────────── */
+    .tt-toolbar {
+      display:       flex;
+      align-items:   center;
+      gap:           0.2rem;
+      padding:       0.3rem 0.5rem;
+      background:    #0f172a;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .tt-btn {
+      background:    #1e293b;
+      border:        1px solid #334155;
+      color:         #94a3b8;
+      padding:       0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size:     0.72rem;
+      cursor:        pointer;
+      transition:    all 0.15s;
+      font-family:   system-ui;
+    }
+    .tt-btn:hover:not(:disabled) {
+      background: #334155;
+      color:      #e2e8f0;
+      border-color: #475569;
+    }
+    .tt-btn:disabled {
+      opacity: 0.3;
+      cursor:  not-allowed;
+    }
+    .tt-btn--resume {
+      background: #7c3aed;
+      border-color: #7c3aed;
+      color: white;
+      font-weight: 600;
+    }
+    .tt-btn--resume:hover:not(:disabled) {
+      background: #6d28d9;
+    }
+    .tt-btn--export, .tt-btn--import {
+      font-size: 0.68rem;
+    }
+    .tt-spacer { flex: 1; }
+
+    /* ── Content ──────────────────────────────────────── */
     .devtools-content {
       overflow-y: auto;
       flex:       1;
@@ -249,6 +380,7 @@ import { JsonPipe } from '@angular/common'
       font-family: system-ui;
     }
 
+    /* ── Log items ────────────────────────────────────── */
     .log-item {
       display:         flex;
       justify-content: space-between;
@@ -256,12 +388,20 @@ import { JsonPipe } from '@angular/common'
       padding:         0.35rem 0.75rem;
       cursor:          pointer;
       border-bottom:   1px solid #1e293b;
+      transition:      background 0.1s;
     }
-    .log-item:hover        { background: #1e293b; }
-    .log-item--error       { background: #1a0a0a; }
+    .log-item:hover     { background: #1e293b; }
+    .log-item--error    { background: #1a0a0a; }
+    .log-item--active   {
+      background:  #1e1b4b !important;
+      border-left: 3px solid #7c3aed;
+    }
+    .log-item--future {
+      opacity: 0.35;
+    }
 
-    .log-item__left  { display: flex; align-items: center; gap: 0.4rem; overflow: hidden; }
-    .log-item__right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+    .log-item__left  { display: flex; align-items: center; gap: 0.4rem; overflow: hidden; flex: 1; }
+    .log-item__right { display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
 
     .log-status  { font-size: 0.72rem; color: #22c55e; flex-shrink: 0; }
     .log-item--error .log-status { color: #ef4444; }
@@ -277,6 +417,13 @@ import { JsonPipe } from '@angular/common'
       border-radius: 4px;
     }
 
+    .btn-replay {
+      font-size: 0.65rem;
+      opacity:   0.5;
+    }
+    .btn-replay:hover { opacity: 1; }
+
+    /* ── Log detail ───────────────────────────────────── */
     .log-detail {
       background:    #0a0f1a;
       padding:       0.6rem 0.75rem;
@@ -302,10 +449,25 @@ import { JsonPipe } from '@angular/common'
       max-height:  140px;
       overflow-y:  auto;
     }
+
+    /* ── State tab ────────────────────────────────────── */
+    .state-store-block {
+      border-bottom: 1px solid #1e293b;
+    }
+    .state-store-block:last-child { border-bottom: none; }
+    .state-store-name {
+      padding:       0.4rem 0.75rem 0.2rem;
+      color:         #3b82f6;
+      font-size:     0.72rem;
+      font-family:   system-ui;
+      font-weight:   600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
     .state-view {
       color:       #86efac;
       font-size:   0.7rem;
-      padding:     0.75rem;
+      padding:     0.25rem 0.75rem 0.75rem;
       margin:      0;
       white-space: pre-wrap;
       word-break:  break-all;
@@ -317,17 +479,41 @@ export class StatoDevToolsComponent implements OnInit, OnDestroy {
   private unsub?: () => void
 
   // State UI
-  isOpen      = signal(false)
-  isMinimized = signal(false)
-  activeTab   = signal<'actions' | 'state'>('actions')
-  logs        = signal<ActionLog[]>([])
-  selectedLog = signal<ActionLog | null>(null)
+  isOpen          = signal(false)
+  isMinimized     = signal(false)
+  activeTab       = signal<'actions' | 'state'>('actions')
+  logs            = signal<ActionLog[]>([])
+  selectedLog     = signal<ActionLog | null>(null)
+  activeLogId     = signal<number | null>(null)
+  isTimeTraveling = signal(false)
 
-  // Position et taille
+  // Snapshot global — latest known state per store
+  globalState = computed(() => {
+    const seen = new Map<string, unknown>()
+    for (const log of this.logs()) {
+      if (!seen.has(log.storeName)) {
+        seen.set(log.storeName, log.nextState)
+      }
+    }
+    return seen
+  })
+
+  // Time-travel computed
+  canUndo = computed(() => this.logs().length > 0)
+  canRedo = computed(() => {
+    if (!this.isTimeTraveling()) return false
+    const id = this.activeLogId()
+    if (id === null) return false
+    if (id === -1) return this.logs().length > 0
+    const idx = this.logs().findIndex(l => l.id === id)
+    return idx > 0  // can go forward (lower index = newer)
+  })
+
+  // Position & size
   posX        = signal(24)
-  posY        = signal(window.innerHeight - 500)
-  panelWidth  = signal(420)
-  panelHeight = signal(460)
+  posY        = signal(window.innerHeight - 520)
+  panelWidth  = signal(440)
+  panelHeight = signal(480)
 
   // Drag state
   private isDragging  = false
@@ -344,9 +530,11 @@ export class StatoDevToolsComponent implements OnInit, OnDestroy {
   private boundMouseUp   = this.onMouseUp.bind(this)
 
   ngOnInit() {
-    this.unsub = devTools.subscribe((state) => {
+    this.unsub = devTools.subscribe((state: DevToolsState) => {
       this.logs.set(state.logs)
       this.isOpen.set(state.isOpen)
+      this.activeLogId.set(state.activeLogId)
+      this.isTimeTraveling.set(state.isTimeTraveling)
     })
 
     document.addEventListener('mousemove', this.boundMouseMove)
@@ -363,11 +551,76 @@ export class StatoDevToolsComponent implements OnInit, OnDestroy {
   toggle()         { devTools.toggle() }
   toggleMinimize() { this.isMinimized.update(v => !v) }
   clear()          { devTools.clear(); this.selectedLog.set(null) }
+
   selectLog(log: ActionLog) {
     this.selectedLog.set(this.selectedLog()?.id === log.id ? null : log)
   }
+
   formatTime(iso: string): string {
     return new Date(iso).toTimeString().slice(0, 8)
+  }
+
+  // ── Time-travel actions ────────────────────────────
+  onTravelTo(log: ActionLog) {
+    // Toggle detail view
+    this.selectLog(log)
+    // Jump to this action's state
+    devTools.travelTo(log.id)
+  }
+
+  onUndo()   { devTools.undo() }
+  onRedo()   { devTools.redo() }
+  onResume() { devTools.resume() }
+
+  onReplay(log: ActionLog, event: Event) {
+    event.stopPropagation()
+    devTools.replay(log.id)
+  }
+
+  isFutureLog(log: ActionLog): boolean {
+    if (!this.isTimeTraveling()) return false
+    const activeId = this.activeLogId()
+    if (activeId === null) return false
+    if (activeId === -1) return true  // all logs are "future"
+    const activeIdx = this.logs().findIndex(l => l.id === activeId)
+    const logIdx = this.logs().findIndex(l => l.id === log.id)
+    return logIdx < activeIdx  // newer logs (lower index) are "future"
+  }
+
+  // ── Export/Import ──────────────────────────────────
+  onExport() {
+    const snapshot = devTools.exportSnapshot()
+    const json = JSON.stringify(snapshot, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `ngstato-snapshot-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  onImport() {
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    input?.click()
+  }
+
+  onFileSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const snapshot = JSON.parse(reader.result as string)
+        devTools.importSnapshot(snapshot)
+      } catch (e) {
+        console.error('[ngStato DevTools] Invalid snapshot file:', e)
+      }
+    }
+    reader.readAsText(file)
+    // Reset input
+    ;(event.target as HTMLInputElement).value = ''
   }
 
   // ── Drag ───────────────────────────────────────────
