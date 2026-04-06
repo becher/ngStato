@@ -5,6 +5,7 @@
 // Store
 export { createStore }                          from './store'
 export { on }                                  from './store'
+export type { OnEvent }                         from './store'
 
 // HTTP
 export { StatoHttp, createHttp, configureHttp, http } from './http'
@@ -41,6 +42,9 @@ export {
   retryStream
 }                                               from './helpers/stream-operators'
 export { withPersist }                          from './helpers/with-persist'
+export { mergeFeatures }                        from './helpers/with-feature'
+export { withProps }                            from './helpers/with-props'
+export type { FeatureConfig, MergedFeature }    from './helpers/with-feature'
 export type { EntityId, EntityState, Update, EntityAdapterOptions } from './helpers/entity-adapter'
 export type { WithEntitiesOptions }             from './helpers/with-entities'
 
@@ -58,4 +62,4 @@ export type { PersistOptions, PersistStorage } from './helpers/with-persist'
 export { StatoHttpError }                       from './types'
 
 export { devTools, createDevTools, connectDevTools } from './devtools'
-export type { ActionLog, DevToolsState, DevToolsInstance } from './devtools'
+export type { ActionLog, DevToolsState, DevToolsInstance, DevToolsSnapshot } from './devtools'

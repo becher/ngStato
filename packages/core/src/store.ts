@@ -38,6 +38,7 @@ class StatoStore<S extends object> {
   private _publicStore: any = null
   private _publicActions: Record<string, Function> = {}
   private _initialized = false
+  private _timeTraveling = false
   private _effects: Array<{
     deps: (state: StateSlice<S>) => unknown | unknown[]
     run: Function
@@ -139,7 +140,9 @@ class StatoStore<S extends object> {
   private _setState(partial: Partial<StateSlice<S>>) {
     // Copie immutable — on ne modifie jamais l'objet original
     this._state = { ...this._state, ...partial }
-    this._runEffects()
+    if (!this._timeTraveling) {
+      this._runEffects()
+    }
     this._notify()
   }
 
@@ -306,9 +309,16 @@ class StatoStore<S extends object> {
     this._setState(partial)
   }
 
+  // ── Time-travel — restaurer un snapshot sans déclencher les effects ──
+  hydrateForTimeTravel(fullState: StateSlice<S>) {
+    this._timeTraveling = true
+    this._state = { ...fullState }
+    this._notify()
+    this._timeTraveling = false
+  }
+
   setPublicStore(publicStore: any) {
     this._publicStore = publicStore
-    this._runEffects(true)
   }
 
   // ── Lifecycle — appelé par l'adaptateur Angular ────
@@ -341,7 +351,10 @@ class StatoStore<S extends object> {
 // FONCTION PUBLIQUE — createStore()
 // ─────────────────────────────────────────────────────
 
-export function createStore<S extends object>(config: S & StatoStoreConfig<S>) {
+export function createStore<S extends object>(
+  config: S & StatoStoreConfig<S>,
+  __internal?: { skipInit?: boolean }
+) {
 
   // Créer l'instance interne
   const store = new StatoStore<S>(config as StatoStoreConfig<S>)
@@ -406,31 +419,49 @@ export function createStore<S extends object>(config: S & StatoStoreConfig<S>) {
   }
 
   // Initialiser automatiquement (onInit + premier run effects)
-  store.init(publicStore)
+  // Si skipInit est demandé (cas Angular), l'adaptateur appellera init() lui-même
+  if (!__internal?.skipInit) {
+    store.init(publicStore)
+  }
 
   return publicStore
 }
 
 // ─────────────────────────────────────────────────────
 // store.on() — réactions inter-stores
+// Supporte une action unique ou un tableau d'actions
 // ─────────────────────────────────────────────────────
 
+export type OnEvent = {
+  name:     string
+  args:     unknown[]
+  status:   'success' | 'error'
+  duration: number
+  error?:   Error
+}
+
 export function on<S extends object>(
-  sourceAction: Function,
-  handler: (store: S, event?: { name: string; args: unknown[]; status: 'success' | 'error'; duration: number; error?: Error }) => void | Promise<void>
-) {
-  return subscribeToAction(sourceAction, (event) => {
-    try {
-      // handler(store) compatible + handler(store, event) plus riche
-      void handler(event.store as S, {
-        name: event.name,
-        args: event.args,
-        status: event.status,
-        duration: event.duration,
-        error: event.error
-      })
-    } catch {
-      // ignore
-    }
-  })
+  sourceAction: Function | Function[],
+  handler: (store: S, event: OnEvent) => void | Promise<void>
+): () => void {
+  const actions = Array.isArray(sourceAction) ? sourceAction : [sourceAction]
+
+  const unsubs = actions.map((action) =>
+    subscribeToAction(action, (event) => {
+      try {
+        void handler(event.store as S, {
+          name:     event.name,
+          args:     event.args,
+          status:   event.status,
+          duration: event.duration,
+          error:    event.error
+        })
+      } catch {
+        // ignore — les erreurs dans les handlers on() ne doivent pas crasher
+      }
+    })
+  )
+
+  // Retourne une fonction de désabonnement unique pour toutes les actions
+  return () => unsubs.forEach((unsub) => unsub())
 }
