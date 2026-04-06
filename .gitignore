@@ -7,7 +7,6 @@ out-tsc/
 
 # Angular
 .angular/
-*.js.map
 
 # Environment
 .env
@@ -35,3 +34,8 @@ pnpm-debug.log*
 # Cache
 .turbo/
 .cache/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Gemini / Antigravity
+.gemini/
