@@ -1,4 +1,4 @@
-name: CI
+name: CI — Build & Test
 
 on:
   push:
@@ -31,17 +31,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build core
-        run: pnpm --filter @ngstato/core build
+      - name: Build @ngstato/core
+        working-directory: packages/core
+        run: npx tsup
 
-      - name: Test core
-        run: pnpm --filter @ngstato/core test
+      - name: Test @ngstato/core (169 tests)
+        working-directory: packages/core
+        run: npx vitest run
 
-      - name: Build testing
-        run: pnpm --filter @ngstato/testing build
+      - name: Build @ngstato/testing
+        working-directory: packages/testing
+        run: npx tsup
 
-      - name: Test testing
-        run: pnpm --filter @ngstato/testing test
+      - name: Test @ngstato/testing
+        working-directory: packages/testing
+        run: npx vitest run
 
-      - name: Build docs
+      - name: Build @ngstato/schematics
+        working-directory: packages/schematics
+        run: npx tsc -p tsconfig.json
+
+      - name: Build @ngstato/eslint-plugin
+        working-directory: packages/eslint-plugin
+        run: npx tsup src/index.ts --format cjs --dts
+
+      - name: Build VitePress docs
         run: pnpm docs:build
