@@ -18,27 +18,27 @@ hero:
 
 features:
   - icon: ⚡
-    title: State-first by design
-    details: "Build features with plain state, actions, selectors, and effects. async/await replaces rxMethod + pipe + switchMap + tapResponse."
-  - icon: 🔌
-    title: RxJS optional
-    details: "Integrate external streams only where needed with fromStream(), combineLatestStream(), and 12 stream operators."
+    title: "~3 KB — 12x lighter than NgRx"
+    details: "Full state management with entity adapters, concurrency control, and DevTools in a fraction of the bundle."
+  - icon: 🧠
+    title: "1 concept: async/await"
+    details: "Build features with plain state, actions, selectors, and effects. No rxMethod, no pipe, no switchMap, no tapResponse."
+  - icon: 🕹️
+    title: "Built-in time-travel DevTools"
+    details: "Undo, redo, replay actions, export/import state snapshots. Built into your app — no Chrome extension needed."
   - icon: 🏢
     title: Enterprise-ready entities
-    details: "Use createEntityAdapter() and withEntities() for normalized collections, generated selectors, and scalable CRUD."
+    details: "createEntityAdapter() and withEntities() for normalized collections with generated selectors and scalable CRUD."
   - icon: 🔀
     title: Concurrency semantics
-    details: "Control async behavior with exclusive(), queued(), abortable(), retryable() — no RxJS operators needed."
+    details: "Control async behavior with exclusive(), queued(), abortable(), retryable(), optimistic() — no RxJS operators."
   - icon: 🧩
     title: Composable features
-    details: "Build reusable store features with mergeFeatures() — like signalStoreFeature() but simpler."
-  - icon: 🛠️
-    title: Built-in DevTools
-    details: "No Chrome extension needed. Drag-and-drop panel, action history, state diffs — auto-disabled in production."
+    details: "Build reusable store features with mergeFeatures() and inject services with withProps() — like signalStoreFeature() but simpler."
+  - icon: 🔌
+    title: RxJS optional
+    details: "Integrate streams only where needed with fromStream(), combineLatestStream(), and 12 pipe-like operators."
   - icon: 🧪
-    title: Testing utilities
-    details: "createMockStore() with __setState(), __dispatch(), and full spy support for isolated unit tests."
-  - icon: 📦
-    title: 38x lighter
-    details: "~3 KB gzipped vs ~50 KB for NgRx. Same capabilities, fraction of the bundle."
+    title: Testing + Schematics + ESLint
+    details: "createMockStore() for tests, ng generate for scaffolding, 3 ESLint rules for best practices. Full toolchain."
 ---

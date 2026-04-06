@@ -27,7 +27,7 @@ Compare ngStato against NgRx v21+ on realistic workloads with transparent method
 
 A complete CRUD feature store with 5 actions (load, create, update, delete, select), loading/error states, and entity management:
 
-| | NgRx SignalStore v20 | ngStato |
+| | NgRx SignalStore v21 | ngStato |
 |---|---|---|
 | State definition | 8 lines | 5 lines |
 | Actions (5 CRUD) | ~55 lines | ~30 lines |
@@ -38,23 +38,37 @@ A complete CRUD feature store with 5 actions (load, create, update, delete, sele
 
 ### Feature comparison
 
-| Feature | NgRx v21 | ngStato v0.3 |
+| Feature | NgRx v21 | ngStato v0.4 |
 |---------|----------|--------------|
 | State management | ✅ | ✅ |
 | Actions (methods) | ✅ rxMethod | ✅ async/await |
 | Computed/Selectors | ✅ | ✅ (memoized) |
-| Entity adapter | ✅ | ✅ |
-| Concurrency helpers | ✅ via RxJS | ✅ native |
-| Stream integration | ✅ RxJS required | ✅ RxJS optional |
-| DevTools | ✅ Chrome extension | ✅ Built-in panel |
+| Entity adapter | ✅ | ✅ `createEntityAdapter` + `withEntities` |
+| Concurrency helpers | ✅ via RxJS | ✅ native (`exclusive`, `queued`, `abortable`) |
+| Stream integration | ✅ RxJS required | ✅ RxJS optional (`fromStream`) |
+| DevTools | ✅ Chrome extension | ✅ Built-in panel, all browsers |
+| Time-travel | ✅ via extension | ✅ **Built-in** with fork-on-dispatch |
+| Action replay | ❌ | ✅ Re-execute any logged action |
+| State export/import | Via extension | ✅ **JSON file** for bug reports |
 | Mobile DevTools | ❌ | ✅ |
-| Production safety | ⚠️ Manual | ✅ Automatic |
-| Testing utilities | ✅ | ✅ |
-| Feature composition | ✅ signalStoreFeature | ✅ mergeFeatures |
-| Inter-store reactions | ✅ via Effects | ✅ on() |
-| Persistence | ❌ (meta-reducers) | ✅ withPersist |
-| Schematics CLI | ✅ | 🔜 v1.0 |
-| ESLint plugin | ✅ | 🔜 v1.0 |
+| Production safety | ⚠️ Manual `logOnly` | ✅ Automatic `isDevMode()` |
+| Testing utilities | ✅ `provideMockStore` | ✅ `createMockStore()` |
+| Feature composition | ✅ `signalStoreFeature` | ✅ `mergeFeatures()` |
+| Service injection | ✅ `withProps` | ✅ `withProps()` + closures |
+| Inter-store reactions | ✅ via Effects | ✅ `on()` multi-action |
+| Persistence | ❌ (meta-reducers) | ✅ `withPersist()` built-in |
+| Schematics CLI | ✅ `ng generate` | ✅ `@ngstato/schematics` |
+| ESLint plugin | ✅ `@ngrx/eslint-plugin` | ✅ `@ngstato/eslint-plugin` |
+
+### Developer experience
+
+| Metric | NgRx | ngStato |
+|--------|------|---------|
+| Time to first store | ~15 min | **~3 min** |
+| Files per feature | 3–5 (reducer, actions, effects, selectors, facade) | **1** |
+| Angular boilerplate | `provideMockStore`, `provideStoreDevtools`, etc. | `provideStato()` — one call |
+| Scaffolding | `ng generate @ngrx/schematics:store` | `ng generate @ngstato/schematics:store` |
+| Linting | `@ngrx/eslint-plugin` | `@ngstato/eslint-plugin` |
 
 ## Benchmark scenarios (planned)
 

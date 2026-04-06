@@ -6,9 +6,9 @@
 
 **State management for Angular — async/await instead of RxJS, ~3 KB instead of ~50 KB.**
 
-[![npm](https://img.shields.io/badge/npm-v0.3.0-blue)](https://www.npmjs.com/package/@ngstato/core)
+[![npm](https://img.shields.io/badge/npm-v0.4.0-blue)](https://www.npmjs.com/package/@ngstato/core)
 [![gzip](https://img.shields.io/badge/gzip-~3KB-brightgreen)](#benchmarks)
-[![tests](https://img.shields.io/badge/tests-149%2B-green)](#)
+[![tests](https://img.shields.io/badge/tests-169%2B-green)](#)
 [![Angular](https://img.shields.io/badge/Angular-17%2B-dd0031)](https://angular.dev)
 [![license](https://img.shields.io/badge/license-MIT-lightgrey)](./LICENSE)
 
@@ -71,37 +71,74 @@ export const appConfig = {
 
 ```ts
 // users.store.ts
-import { createStore, http }         from '@ngstato/core'
-import { StatoStore, injectStore }   from '@ngstato/angular'
+import { createStore, http, connectDevTools } from '@ngstato/core'
+import { StatoStore, injectStore }            from '@ngstato/angular'
 
-export const UsersStore = StatoStore(() => createStore({
-  users:   [] as User[],
-  loading: false,
+export const UsersStore = StatoStore(() => {
+  const store = createStore({
+    users:   [] as User[],
+    loading: false,
+    error:   null as string | null,
 
-  selectors: {
-    total: (s) => s.users.length
-  },
+    selectors: {
+      total:      (s) => s.users.length,
+      activeUsers: (s) => s.users.filter(u => u.active)
+    },
 
-  actions: {
-    async loadUsers(state) {
-      state.loading = true
-      state.users   = await http.get('/users')
-      state.loading = false
+    actions: {
+      async loadUsers(state) {
+        state.loading = true
+        state.error   = null
+        try {
+          state.users = await http.get('/users')
+        } catch (e) {
+          state.error = (e as Error).message
+          throw e
+        } finally {
+          state.loading = false
+        }
+      },
+
+      async createUser(state, payload: Omit<User, 'id'>) {
+        const user = await http.post<User>('/users', payload)
+        state.users = [...state.users, user]
+      },
+
+      async deleteUser(state, id: string) {
+        await http.delete(`/users/${id}`)
+        state.users = state.users.filter(u => u.id !== id)
+      }
+    },
+
+    hooks: {
+      onInit:  (store) => store.loadUsers(),
+      onError: (err, action) => console.error(`[UsersStore] ${action}:`, err.message)
     }
-  },
+  })
 
-  hooks: { onInit: (store) => store.loadUsers() }
-}))
+  connectDevTools(store, 'UsersStore')
+  return store
+})
 ```
 
 ```ts
 // users.component.ts — all state properties are Angular Signals
 @Component({
   template: `
-    <h2>Users ({{ store.total() }})</h2>
-    @for (user of store.users(); track user.id) {
-      <p>{{ user.name }}</p>
+    @if (store.loading()) {
+      <div class="spinner">Loading...</div>
     }
+
+    <h2>Users ({{ store.total() }})</h2>
+
+    @for (user of store.users(); track user.id) {
+      <div class="user-card">
+        <span>{{ user.name }}</span>
+        <button (click)="store.deleteUser(user.id)">Delete</button>
+      </div>
+    }
+
+    <button (click)="store.loadUsers()">Refresh</button>
   `
 })
 export class UsersComponent {
@@ -123,6 +160,7 @@ export class UsersComponent {
 | **RxJS required** | Yes | **No** |
 | **DevTools** | Chrome extension only | **Built-in panel, all browsers, mobile** |
 | **Time-travel** | ✅ via extension | ✅ **built-in with fork-on-dispatch** |
+| **Action replay** | ❌ | ✅ **re-execute any action** |
 | **State export/import** | Via extension | ✅ **JSON file for bug reports** |
 | **Prod safety** | Manual `logOnly` | **Auto `isDevMode()`** |
 | **Entity adapter** | ✅ | ✅ `createEntityAdapter` + `withEntities` |
@@ -132,6 +170,7 @@ export class UsersComponent {
 | **Testing** | `provideMockStore` | ✅ `createMockStore()` |
 | **Persistence** | Custom meta-reducers | ✅ `withPersist()` built-in |
 | **Schematics CLI** | ✅ `ng generate` | ✅ `ng generate @ngstato/schematics:store` |
+| **ESLint plugin** | ✅ `@ngrx/eslint-plugin` | ✅ `@ngstato/eslint-plugin` |
 
 ---
 
@@ -149,26 +188,109 @@ actions: {
 }
 ```
 
-**Plus:** `debounced` · `throttled` · `distinctUntilChanged` · `forkJoin` · `race` · `combineLatest` · `fromStream` · `pipeStream` + 12 stream operators · `createEntityAdapter` · `withEntities` · `withPersist` · `mergeFeatures` · `on()` inter-store reactions
+**Plus:** `debounced` · `throttled` · `distinctUntilChanged` · `forkJoin` · `race` · `combineLatest` · `fromStream` · `pipeStream` + 12 stream operators · `createEntityAdapter` · `withEntities` · `withPersist` · `mergeFeatures` · `withProps` · `on()` inter-store reactions
 
 → [Full helpers API](https://becher.github.io/ngStato/api/helpers)
 
 ---
 
-## DevTools — zero install
+## DevTools — zero install, built-in time-travel
 
-Built-in panel. Drag, resize, minimize. No Chrome extension.  
+Built-in panel. Drag, resize, minimize. No Chrome extension.
 Auto-disabled in production via `isDevMode()`.
 
 ```ts
-import { connectDevTools } from '@ngstato/core'
+import { connectDevTools, devTools } from '@ngstato/core'
 connectDevTools(store, 'UsersStore')
+
+// Time-travel programmatically
+devTools.undo()                    // step backward
+devTools.redo()                    // step forward
+devTools.travelTo(logId)           // jump to any action
+devTools.replay(logId)             // re-execute an action
+devTools.resume()                  // resume live mode
+
+// Export/import for bug reports
+const snapshot = devTools.exportSnapshot()
+devTools.importSnapshot(snapshot)
 ```
 
 ```html
 <!-- app.component.html -->
 <stato-devtools />
 ```
+
+---
+
+## Schematics — scaffold in seconds
+
+```bash
+# Generate a full CRUD store with tests
+ng generate @ngstato/schematics:store users --crud --entity
+
+# Generate a reusable feature
+ng generate @ngstato/schematics:feature loading
+```
+
+<details>
+<summary>Example generated store</summary>
+
+```ts
+// users.store.ts (auto-generated)
+import { createStore, http, createEntityAdapter, withEntities, connectDevTools } from '@ngstato/core'
+import { StatoStore } from '@ngstato/angular'
+
+export interface User { id: string; name: string }
+const adapter = createEntityAdapter<User>()
+
+function createUserStore() {
+  const store = createStore({
+    ...withEntities<User>(),
+    loading: false,
+    error: null as string | null,
+
+    selectors: { total: (s) => s.ids.length },
+
+    actions: {
+      async loadUsers(state) { /* ... */ },
+      async createUser(state, payload) { /* ... */ },
+      async updateUser(state, id, changes) { /* ... */ },
+      async deleteUser(state, id) { /* ... */ }
+    },
+
+    hooks: {
+      onInit: (store) => store.loadUsers(),
+      onError: (err, action) => console.error(`[UserStore] ${action}:`, err.message)
+    }
+  })
+  connectDevTools(store, 'UserStore')
+  return store
+}
+
+export const UserStore = StatoStore(() => createUserStore())
+```
+
+</details>
+
+---
+
+## ESLint — catch mistakes at dev time
+
+```bash
+npm install -D @ngstato/eslint-plugin
+```
+
+```js
+// eslint.config.js
+import ngstato from '@ngstato/eslint-plugin'
+export default [ngstato.configs.recommended]
+```
+
+| Rule | Default | Description |
+|------|---------|-------------|
+| `ngstato/no-state-mutation-outside-action` | `error` | Prevent direct state mutation |
+| `ngstato/no-async-without-error-handling` | `warn` | Require try/catch in async actions |
+| `ngstato/require-devtools` | `warn` | Suggest `connectDevTools()` |
 
 ---
 
@@ -192,6 +314,7 @@ connectDevTools(store, 'UsersStore')
 | [Angular guide](https://becher.github.io/ngStato/guide/angular) | [Architecture](https://becher.github.io/ngStato/guide/architecture) |
 | [Testing guide](https://becher.github.io/ngStato/guide/testing) | [NgRx migration](https://becher.github.io/ngStato/migration/ngrx-to-ngstato) |
 | [CRUD recipe](https://becher.github.io/ngStato/recipes/crud) | [API reference](https://becher.github.io/ngStato/api/core) |
+| [Entities](https://becher.github.io/ngStato/guide/entities) | [Benchmarks](https://becher.github.io/ngStato/benchmarks/overview) |
 
 ## Contributing
 
@@ -202,4 +325,4 @@ cd ngStato && pnpm install && pnpm build && pnpm test
 
 ## License
 
-MIT — Copyright © 2025 ngStato
+MIT — Copyright © 2025-2026 ngStato

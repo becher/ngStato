@@ -93,10 +93,11 @@ export default defineConfig({
     outline: 'deep',
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2025 ngStato'
+      copyright: 'Copyright © 2025-2026 ngStato'
     },
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/becher/ngStato' }
+      { icon: 'github', link: 'https://github.com/becher/ngStato' },
+      { icon: 'npm', link: 'https://www.npmjs.com/org/ngstato' }
     ]
   }
 })
