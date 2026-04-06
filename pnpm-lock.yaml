@@ -216,15 +216,12 @@ importers:
       '@ngstato/core':
         specifier: '>=0.3.0'
         version: 0.3.0
-      typescript:
-        specifier: ~5.5.0
-        version: 5.5.4
 
   packages/testing:
     dependencies:
       '@ngstato/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: ^0.3.0
+        version: 0.3.0
     devDependencies:
       tsup:
         specifier: ^8.0.0
