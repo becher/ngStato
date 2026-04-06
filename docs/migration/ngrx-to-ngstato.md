@@ -1,68 +1,175 @@
-# NgRx to ngStato
+# NgRx → ngStato Migration
 
-## Migration intent
+## Migration strategy
 
-Migrate incrementally while reducing boilerplate and keeping enterprise safety.
+**Migrate incrementally** — one feature store at a time. ngStato and NgRx can coexist in the same application.
 
-## Quick mapping
+## Complete API mapping
 
-- NgRx `Store` + reducers -> ngStato `createStore()` actions
-- NgRx selectors -> ngStato selectors
-- NgRx entity adapter -> `createEntityAdapter()` / `withEntities()`
-- NgRx effects / RxJS flows -> ngStato effects and optional stream toolkit
+### State
 
-## Before / after example
+| NgRx | ngStato | Notes |
+|------|---------|-------|
+| `withState({ users: [], loading: false })` | `users: [], loading: false` | State is defined at config root |
+| `patchState(store, { loading: true })` | `state.loading = true` | Direct mutation via Proxy |
+| `getState(store)` | `store.getState()` | Full snapshot |
 
-NgRx style:
+### Actions & Methods
 
+| NgRx | ngStato | Notes |
+|------|---------|-------|
+| `withMethods((store) => ({ ... }))` | `actions: { ... }` | No wrapper needed |
+| `rxMethod<void>(pipe(...))` | `async fn(state) { ... }` | async/await replaces RxJS pipe |
+| `tapResponse({ next, error })` | `try/catch/finally` | Native error handling |
+| `patchState(store, { x: y })` | `state.x = y` | Proxy intercepts mutations |
+
+**Before (NgRx):**
 ```ts
-// reducer + actions + selectors in separate files
-export const loadStudents = createAction('[Students] Load')
-export const loadStudentsSuccess = createAction('[Students] Load Success', props<{ items: Student[] }>())
+withMethods((store, service = inject(UserService)) => ({
+  load: rxMethod<void>(
+    pipe(
+      tap(() => patchState(store, { loading: true })),
+      switchMap(() =>
+        from(service.getAll()).pipe(
+          tapResponse({
+            next:  (users) => patchState(store, { users, loading: false }),
+            error: (e) => patchState(store, { error: e.message, loading: false })
+          })
+        )
+      )
+    )
+  )
+}))
 ```
 
-ngStato style:
-
+**After (ngStato):**
 ```ts
-export const studentsStore = createStore({
-  items: [] as Student[],
-  loading: false,
-  actions: {
-    async load(state) {
-      state.loading = true
-      state.items = await api.listStudents()
+actions: {
+  async load(state) {
+    state.loading = true
+    try {
+      state.users = await http.get('/users')
+    } catch (e) {
+      state.error = (e as Error).message
+    } finally {
       state.loading = false
     }
-  },
-  selectors: {
-    total: (state) => state.items.length
   }
-})
+}
 ```
 
-## Incremental approach
+### Computed & Selectors
 
-1. Start on one feature domain
-2. Keep API services unchanged
-3. Migrate selectors and actions first
-4. Introduce stream operators only where necessary
-5. Measure code size and runtime behavior
+| NgRx | ngStato | Notes |
+|------|---------|-------|
+| `withComputed((store) => ({ total: computed(() => store.users().length) }))` | `computed: { total: (s) => s.users.length }` | No Angular `computed()` needed |
+| `createSelector(selectUsers, (users) => ...)` | `selectors: { ... }` | Auto-memoized |
 
-## Success criteria
+### Entity
 
-- fewer files and less boilerplate
-- equal or better runtime behavior
-- clear tests around business semantics
+| NgRx | ngStato |
+|------|---------|
+| `withEntities<User>()` | `withEntities(config, { key, adapter })` |
+| `EntityAdapter` from `@ngrx/entity` | `createEntityAdapter()` from `@ngstato/core` |
+| `setAllEntities(users)` | `adapter.setAll(state, users)` |
+| `addEntity(user)` | `adapter.addOne(state, user)` |
+| `removeEntity(id)` | `adapter.removeOne(state, id)` |
+| `updateEntity({ id, changes })` | `adapter.updateOne(state, { id, changes })` |
 
-## Practical checklist
+### Effects
 
-- Start from one feature, not whole app.
-- Keep backend APIs unchanged.
-- Port reducer logic into store actions.
-- Port selectors as-is, then simplify.
-- Add concurrency helper only when needed.
+| NgRx | ngStato | Notes |
+|------|---------|-------|
+| `@Effect()` class-based | `effects: [[deps, runner]]` | Dependency-tracked |
+| `Actions + ofType()` | `on(action, handler)` | Inter-store reactions |
+| `switchMap` | `abortable()` | Cancel previous |
+| `exhaustMap` | `exclusive()` | Ignore while running |
+| `concatMap` | `queued()` | Process in order |
+| `retryWhen` | `retryable()` | Retry with backoff |
+| `debounceTime` | `debounced()` | Debounce action calls |
+| `throttleTime` | `throttled()` | Throttle action calls |
 
-## Playground
+### Store features
 
-- [Open StackBlitz demo](https://stackblitz.com/github/becher/ngStato/tree/main/apps/stackblitz-demo)
+| NgRx | ngStato |
+|------|---------|
+| `signalStoreFeature()` | `mergeFeatures()` |
+| `withState()` + `withMethods()` + `withComputed()` | Single config object |
+| `provideMockStore()` | `createMockStore()` from `@ngstato/testing` |
 
+### DevTools
+
+| NgRx | ngStato |
+|------|---------|
+| Chrome Redux DevTools extension | Built-in `<stato-devtools>` component |
+| `provideStoreDevtools({ logOnly: !isDevMode() })` | `provideStato({ devtools: isDevMode() })` |
+| `connectDevTools(store, 'Name')` | Same |
+
+## Step-by-step migration
+
+### Step 1: Pick one feature store
+
+Start with a **simple, isolated** store (e.g., settings, auth, or a small CRUD).
+
+### Step 2: Install ngStato alongside NgRx
+
+```bash
+npm install @ngstato/core @ngstato/angular
+```
+
+Add `provideStato()` to your `app.config.ts` alongside existing NgRx providers.
+
+### Step 3: Rewrite the store
+
+```ts
+// Before: users.store.ts (NgRx)
+export const UsersStore = signalStore(
+  withState({ users: [] as User[], loading: false }),
+  withComputed(/* ... */),
+  withMethods(/* ... rxMethod ... */)
+)
+
+// After: users.store.ts (ngStato)
+export const UsersStore = StatoStore(() => createStore({
+  users: [] as User[],
+  loading: false,
+  computed: { /* ... */ },
+  actions: { /* ... async/await ... */ }
+}))
+```
+
+### Step 4: Update components
+
+```ts
+// Before (NgRx)
+store = inject(UsersStore)
+store.users()          // Signal
+store.load()           // rxMethod
+
+// After (ngStato)
+store = injectStore(UsersStore)
+store.users()          // Signal (same!)
+store.load()           // async action (same call!)
+```
+
+::: tip Templates usually don't change
+Since both NgRx SignalStore and ngStato use Angular Signals, your templates often need **zero changes**.
+:::
+
+### Step 5: Remove NgRx for that feature
+
+Once the new store is working and tested, remove the old NgRx store file and its related actions/reducers/effects.
+
+### Step 6: Repeat
+
+Migrate the next feature store. Continue until all stores are migrated, then remove `@ngrx/*` packages.
+
+## Success metrics
+
+| Metric | Expected |
+|--------|----------|
+| Lines of code | 40-60% reduction |
+| Files per feature | Fewer (no separate actions/reducers/effects) |
+| Concepts to learn | 1 (async/await) vs 9+ (RxJS operators) |
+| Bundle size | ~3 KB vs ~50 KB gzipped |
+| Runtime behavior | Equal or better |
