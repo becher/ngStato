@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "ngstato-feature-schema",
+  "title": "ngStato Feature Schematic",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the feature (e.g. 'loading', 'pagination')",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What name would you like for the feature?"
+    },
+    "path": {
+      "type": "string",
+      "description": "Path to create the feature in",
+      "default": "src/app/store-features"
+    }
+  },
+  "required": ["name"]
+}

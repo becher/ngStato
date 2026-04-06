@@ -1,0 +1,17 @@
+{
+  "$schema": "../node_modules/@angular-devkit/schematics/collection-schema.json",
+  "schematics": {
+    "store": {
+      "description": "Generate a new ngStato store",
+      "factory": "./dist/store/index#store",
+      "schema": "./src/store/schema.json",
+      "aliases": ["s"]
+    },
+    "feature": {
+      "description": "Generate a reusable store feature",
+      "factory": "./dist/feature/index#feature",
+      "schema": "./src/feature/schema.json",
+      "aliases": ["f"]
+    }
+  }
+}

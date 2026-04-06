@@ -1,0 +1,42 @@
+{
+  "name": "@ngstato/schematics",
+  "version": "0.4.0",
+  "private": false,
+  "description": "Angular CLI schematics for ngStato — generate stores, features, and entities",
+  "schematics": "./collection.json",
+  "files": [
+    "dist",
+    "collection.json",
+    "src/store/schema.json",
+    "src/feature/schema.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@angular-devkit/core": "^18.0.0",
+    "@angular-devkit/schematics": "^18.0.0"
+  },
+  "peerDependencies": {
+    "@ngstato/core": ">=0.3.0",
+    "@ngstato/angular": ">=0.3.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/becher/ngStato.git",
+    "directory": "packages/schematics"
+  },
+  "homepage": "https://github.com/becher/ngStato#readme",
+  "author": "becher",
+  "keywords": [
+    "angular",
+    "schematics",
+    "ngstato",
+    "store",
+    "generator",
+    "cli",
+    "ngrx"
+  ]
+}

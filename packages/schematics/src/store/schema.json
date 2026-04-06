@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "$id": "ngstato-store-schema",
+  "title": "ngStato Store Schematic",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the store (e.g. 'users', 'products')",
+      "$default": { "$source": "argv", "index": 0 },
+      "x-prompt": "What name would you like to use for the store?"
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to create the store in",
+      "default": "src/app/stores",
+      "visible": false
+    },
+    "flat": {
+      "type": "boolean",
+      "description": "Create the store file directly in the path without a subdirectory",
+      "default": false
+    },
+    "crud": {
+      "type": "boolean",
+      "description": "Generate CRUD actions (load, create, update, delete)",
+      "default": true,
+      "x-prompt": "Include CRUD actions?"
+    },
+    "entity": {
+      "type": "boolean",
+      "description": "Use entity adapter for normalized collections",
+      "default": false,
+      "x-prompt": "Use entity adapter?"
+    },
+    "devtools": {
+      "type": "boolean",
+      "description": "Connect to DevTools",
+      "default": true
+    },
+    "spec": {
+      "type": "boolean",
+      "description": "Generate a spec file for the store",
+      "default": true
+    }
+  },
+  "required": ["name"]
+}
