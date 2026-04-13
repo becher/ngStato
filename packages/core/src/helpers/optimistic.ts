@@ -11,9 +11,8 @@ export function optimistic<S, A extends unknown[]>(
 ) {
   return async (state: S, ...args: A): Promise<void> => {
     // 1. Snapshot PROFOND du state AVANT la modification
-    // structuredClone garantit un rollback correct même avec
-    // des arrays/objets imbriqués (ex: state.users[0].name)
-    const snapshot = structuredClone(state) as S
+    // JSON deep clone — structuredClone fails on Proxy objects
+    const snapshot = JSON.parse(JSON.stringify(state)) as S
 
     // 2. Appliquer la modification immédiatement
     immediate(state, ...args)

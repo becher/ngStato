@@ -3,6 +3,7 @@
 // Time-travel, action replay, state export/import
 // ─────────────────────────────────────────────────────
 
+import { setDispatchHook } from './store'
 export interface ActionLog {
   id:        number
   name:      string
@@ -356,79 +357,53 @@ export const devTools: DevToolsInstance =
 
 // ─────────────────────────────────────────────────────
 // PLUGIN — connecte un store aux DevTools
+// Uses globalThis dispatch hook — no private hook patching
 // ─────────────────────────────────────────────────────
 
-export function connectDevTools(store: any, storeName: string) {
-  if (!devTools) return
-
-  let prevState: any = {}
-
-  // Accès aux hooks via __store__
-  const internalStore = store.__store__
-
-  if (!internalStore) return
-
-  const wasRegistered = devTools.getStoreRegistry().has(storeName)
-
-  // Register in store registry for time-travel
-  devTools.registerStore(storeName, store, internalStore)
-
-  // Sauvegarder les hooks existants
-  const hooksObj = internalStore['_hooks']
-  const existingOnAction      = hooksObj.onAction
-  const existingOnActionDone  = hooksObj.onActionDone
-  const existingOnError       = hooksObj.onError
-
-  // Mutate the hooks IN-PLACE so the store's internal this._hooks reference sees the change
-  hooksObj.onAction = (name: string, args: unknown[]) => {
-    prevState = store.getState()
-    existingOnAction?.(name, args)
-  }
-
-  hooksObj.onActionDone = (name: string, duration: number) => {
-    const nextState = store.getState()
-    devTools.logAction({
-      name:      `[${storeName}] ${name}`,
-      storeName,
-      args:      [],
-      duration,
-      status:    'success',
-      prevState: { ...prevState },
-      nextState: { ...nextState }
-    })
-    existingOnActionDone?.(name, duration)
-  }
-
-  hooksObj.onError = (error: Error, actionName: string) => {
+// Install the global dispatch hook once
+function ensureDispatchHook() {
+  setDispatchHook((storeName, actionName, prevState, nextState, duration, status, error) => {
     devTools.logAction({
       name:      `[${storeName}] ${actionName}`,
       storeName,
       args:      [],
-      duration:  0,
-      status:    'error',
-      error:     error.message,
+      duration,
+      status,
+      error,
       prevState: { ...prevState },
-      nextState: { ...prevState }
+      nextState: { ...nextState }
     })
-    existingOnError?.(error, actionName)
-  }
+  })
+}
 
-  // Log an initial snapshot so the DevTools UI isn't empty before the first action.
-  // This also helps in environments where actions are not triggered immediately.
-  if (!wasRegistered) {
-    try {
-      const nextState = store.getState()
-      devTools.logAction({
-        name:      `[${storeName}] @@INIT`,
-        storeName,
-        args:      [],
-        duration:  0,
-        status:    'success',
-        prevState: {},
-        nextState: { ...nextState }
-      })
-    } catch {
-      // ignore
-    }
+export function connectDevTools(store: any, storeName: string) {
+  if (!devTools) return
+
+  const internalStore = store.__store__
+  if (!internalStore) return
+
+  // Tag the internal store so dispatch() knows to call the hook
+  internalStore._devToolsStoreName = storeName
+
+  // Register in store registry for time-travel
+  devTools.registerStore(storeName, store, internalStore)
+
+  // Install global dispatch hook (idempotent)
+  ensureDispatchHook()
+
+  // Log initial state
+  try {
+    const currentState = store.getState()
+    devTools.logAction({
+      name:      `[${storeName}] @@INIT`,
+      storeName,
+      args:      [],
+      duration:  0,
+      status:    'success',
+      prevState: {},
+      nextState: { ...currentState }
+    })
+  } catch {
+    // ignore
   }
 }

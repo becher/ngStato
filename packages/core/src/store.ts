@@ -11,6 +11,16 @@ import type {
 } from './types'
 import { emitActionEvent, subscribeToAction } from './action-bus'
 
+// Global DevTools dispatch hook — set by connectDevTools
+const DEVTOOLS_DISPATCH_KEY = '__NGSTATO_DISPATCH_HOOK__'
+type DispatchHook = (storeName: string, actionName: string, prevState: any, nextState: any, duration: number, status: 'success' | 'error', error?: string) => void
+function getDispatchHook(): DispatchHook | undefined {
+  return (globalThis as any)[DEVTOOLS_DISPATCH_KEY]
+}
+export function setDispatchHook(hook: DispatchHook) {
+  (globalThis as any)[DEVTOOLS_DISPATCH_KEY] = hook
+}
+
 // ─────────────────────────────────────────────────────
 // CLASSE INTERNE — jamais exposée directement
 // ─────────────────────────────────────────────────────
@@ -39,6 +49,7 @@ class StatoStore<S extends object> {
   private _publicActions: Record<string, Function> = {}
   private _initialized = false
   private _timeTraveling = false
+  _devToolsStoreName: string | null = null
   private _effects: Array<{
     deps: (state: StateSlice<S>) => unknown | unknown[]
     run: Function
@@ -253,6 +264,11 @@ class StatoStore<S extends object> {
         this._hooks.onStateChange?.(prevState as any, nextState as any)
       }
 
+      // DevTools logging — via globalThis hook
+      if (this._devToolsStoreName) {
+        getDispatchHook()?.(this._devToolsStoreName, actionName, prevState, nextState, duration, 'success')
+      }
+
       if (publicAction) {
         emitActionEvent({
           action: publicAction,
@@ -268,6 +284,12 @@ class StatoStore<S extends object> {
       // Hook onError — si une erreur est lancée
       this._hooks.onError?.(error as Error, actionName)
 
+      const errDuration = Date.now() - start
+      // DevTools logging — error
+      if (this._devToolsStoreName) {
+        getDispatchHook()?.(this._devToolsStoreName, actionName, prevState, prevState, errDuration, 'error', (error as Error).message)
+      }
+
       if (publicAction) {
         emitActionEvent({
           action: publicAction,
@@ -275,7 +297,7 @@ class StatoStore<S extends object> {
           args,
           store: this._publicStore,
           status: 'error',
-          duration: Date.now() - start,
+          duration: errDuration,
           error: error as Error
         })
       }
