@@ -346,9 +346,13 @@ export function createDevTools(maxLogs = 100): DevToolsInstance {
 
 // ─────────────────────────────────────────────────────
 // INSTANCE GLOBALE — singleton partagé entre tous les stores
+// Uses globalThis to survive across multiple bundle copies
 // ─────────────────────────────────────────────────────
 
-export const devTools = createDevTools()
+const DEVTOOLS_KEY = '__NGSTATO_DEVTOOLS__'
+export const devTools: DevToolsInstance =
+  (globalThis as any)[DEVTOOLS_KEY] ??
+  ((globalThis as any)[DEVTOOLS_KEY] = createDevTools())
 
 // ─────────────────────────────────────────────────────
 // PLUGIN — connecte un store aux DevTools
@@ -364,49 +368,67 @@ export function connectDevTools(store: any, storeName: string) {
 
   if (!internalStore) return
 
+  const wasRegistered = devTools.getStoreRegistry().has(storeName)
+
   // Register in store registry for time-travel
   devTools.registerStore(storeName, store, internalStore)
 
   // Sauvegarder les hooks existants
-  const existingHooks = { ...internalStore['_hooks'] }
+  const hooksObj = internalStore['_hooks']
+  const existingOnAction      = hooksObj.onAction
+  const existingOnActionDone  = hooksObj.onActionDone
+  const existingOnError       = hooksObj.onError
 
-  // Remplacer les hooks
-  internalStore['_hooks'] = {
-    ...existingHooks,
+  // Mutate the hooks IN-PLACE so the store's internal this._hooks reference sees the change
+  hooksObj.onAction = (name: string, args: unknown[]) => {
+    prevState = store.getState()
+    existingOnAction?.(name, args)
+  }
 
-    onAction(name: string, args: unknown[]) {
-      prevState = store.getState()
-      existingHooks.onAction?.(name, args)
-    },
+  hooksObj.onActionDone = (name: string, duration: number) => {
+    const nextState = store.getState()
+    devTools.logAction({
+      name:      `[${storeName}] ${name}`,
+      storeName,
+      args:      [],
+      duration,
+      status:    'success',
+      prevState: { ...prevState },
+      nextState: { ...nextState }
+    })
+    existingOnActionDone?.(name, duration)
+  }
 
-    onActionDone(name: string, duration: number) {
+  hooksObj.onError = (error: Error, actionName: string) => {
+    devTools.logAction({
+      name:      `[${storeName}] ${actionName}`,
+      storeName,
+      args:      [],
+      duration:  0,
+      status:    'error',
+      error:     error.message,
+      prevState: { ...prevState },
+      nextState: { ...prevState }
+    })
+    existingOnError?.(error, actionName)
+  }
+
+  // Log an initial snapshot so the DevTools UI isn't empty before the first action.
+  // This also helps in environments where actions are not triggered immediately.
+  if (!wasRegistered) {
+    try {
       const nextState = store.getState()
       devTools.logAction({
-        name:      `[${storeName}] ${name}`,
-        storeName,
-        args:      [],
-        duration,
-        status:    'success',
-        prevState: { ...prevState },
-        nextState: { ...nextState }
-      })
-      existingHooks.onActionDone?.(name, duration)
-    },
-
-    onError(error: Error, actionName: string) {
-      devTools.logAction({
-        name:      `[${storeName}] ${actionName}`,
+        name:      `[${storeName}] @@INIT`,
         storeName,
         args:      [],
         duration:  0,
-        status:    'error',
-        error:     error.message,
-        prevState: { ...prevState },
-        nextState: { ...prevState }
+        status:    'success',
+        prevState: {},
+        nextState: { ...nextState }
       })
-      existingHooks.onError?.(error, actionName)
-    },
-
-    onStateChange: existingHooks.onStateChange
+    } catch {
+      // ignore
+    }
   }
 }
