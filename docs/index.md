@@ -11,7 +11,7 @@ hero:
       link: /guide/start-in-5-min
     - theme: alt
       text: 🚀 Live Demo (StackBlitz)
-      link: https://stackblitz.com/github/becher/ngStato-demo
+      link: https://becher.github.io/ngstato-demo/
     - theme: alt
       text: Migration from NgRx
       link: /migration/ngrx-to-ngstato

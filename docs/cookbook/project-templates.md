@@ -1,6 +1,6 @@
 # Project Templates
 
-> 🚀 **[Live Demo on StackBlitz](https://stackblitz.com/github/becher/ngStato-demo)** — See a full Todo app using ngStato v0.4.0 with time-travel DevTools, filters, and optimistic updates.
+> 🚀 **[Live Demo](https://becher.github.io/ngstato-demo/)** — See a full Todo app using ngStato v0.4.0 with time-travel DevTools, filters, and optimistic updates.
 
 Use these folder structures and starter code as copy-paste starting points for new features.
 
