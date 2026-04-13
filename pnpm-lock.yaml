@@ -113,8 +113,8 @@ importers:
         specifier: '>=17.0.0'
         version: 18.2.14(rxjs@7.8.2)(zone.js@0.14.10)
       '@ngstato/core':
-        specifier: ^0.3.0
-        version: 0.3.0
+        specifier: '>=0.4.0'
+        version: 0.4.2
     devDependencies:
       '@angular/common':
         specifier: ^18.0.0
@@ -1842,6 +1842,9 @@ packages:
 
   '@ngstato/core@0.3.0':
     resolution: {integrity: sha512-R771Cp4xp/agisgQemSRtRGVGkPfU3sEUhjhf5eRy/1+UkTOBAN9S8InRot0y8UVclvu31xJsW0BLJtp2gBRyg==}
+
+  '@ngstato/core@0.4.2':
+    resolution: {integrity: sha512-b/JHWu0VAUMfgIX0l3U1djj4G7UPENGH6Lydtd58/yyqlbEUHGTnjymBTm21o82/yMVZ2smITDOH49kU/YAqIw==}
 
   '@ngtools/webpack@18.2.21':
     resolution: {integrity: sha512-mfLT7lXbyJRlsazuPyuF5AGsMcgzRJRwsDlgxFbiy1DBlaF1chRFsXrKYj1gQ/WXQWNcEd11aedU0Rt+iCNDVw==}
@@ -8196,6 +8199,8 @@ snapshots:
       '@ngstato/core': 0.3.0
 
   '@ngstato/core@0.3.0': {}
+
+  '@ngstato/core@0.4.2': {}
 
   '@ngtools/webpack@18.2.21(@angular/compiler-cli@18.2.14(@angular/compiler@18.2.14(@angular/core@18.2.14(rxjs@7.8.2)(zone.js@0.14.10)))(typescript@5.5.4))(typescript@5.5.4)(webpack@5.94.0(@swc/core@1.15.18)(esbuild@0.23.0))':
     dependencies:
